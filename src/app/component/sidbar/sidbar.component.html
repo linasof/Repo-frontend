@@ -1,0 +1,87 @@
+
+<aside class="sidebar">
+  <!-- Marca -->
+  <div class="sidebar-superior">
+    <a class="marca" [routerLink]="['/inicio']">
+      <div class="marca-logo">
+        <i class="pi pi-box"></i>
+      </div>
+
+      <div class="marca-texto">
+        <div class="marca-nombre">Kinetix IT</div>
+        <div class="marca-sub">Sistema de inventario</div>
+      </div>
+    </a>
+
+    <!-- Navegación principal -->
+    <nav class="nav">
+      <p class="nav-titulo">ESPACIO DE TRABAJO</p>
+
+      <a
+        *ngFor="let e of enlaces"
+        class="nav-item"
+        [routerLink]="e.ruta"
+        routerLinkActive="activo"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <span class="nav-icono">
+          <i class="pi" [ngClass]="e.icono"></i>
+        </span>
+
+        <span class="nav-label">{{ e.label }}</span>
+
+        <i class="pi pi-angle-right nav-flecha"></i>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Parte inferior -->
+  <div class="sidebar-inferior">
+    <div class="estado-sistema">
+      <div class="estado-indicador">
+        <span class="estado-punto"></span>
+        <span>Sistema operativo</span>
+      </div>
+
+      <p>Gestión centralizada de inventario</p>
+    </div>
+
+    <div class="usuario-card">
+      <div class="avatar">
+        {{ inicialesUsuario }}
+      </div>
+
+      <div class="usuario-info">
+        <div class="usuario-nombre" [title]="nombreUsuario">
+          {{ nombreUsuario }}
+        </div>
+
+        <div class="usuario-rol">Usuario del sistema</div>
+      </div>
+
+      <button
+        type="button"
+        class="btn-salir"
+        title="Volver al inicio"
+        aria-label="Cerrar sesión"
+        (click)="cerrarSesion()"
+      >
+        <i class="pi pi-sign-out"></i>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Navegación inferior para celulares -->
+<nav class="nav-movil">
+  <a
+    *ngFor="let e of enlaces"
+    class="nav-item-movil"
+    [routerLink]="e.ruta"
+    routerLinkActive="activo"
+    [routerLinkActiveOptions]="{ exact: true }"
+  >
+    <i class="pi" [ngClass]="e.icono"></i>
+    <span>{{ e.label }}</span>
+  </a>
+</nav>

@@ -1,0 +1,605 @@
+
+<app-sidbar></app-sidbar>
+<app-navbar></app-navbar>
+
+<main class="inventario-wrapper">
+
+  <!-- ENCABEZADO -->
+  <header class="encabezado">
+    <div>
+
+      <h1>
+        <i class="pi pi-box" style="color:#2563eb"></i>
+        Gestión de inventario
+      </h1>
+
+      <p class="subtitulo">
+        Administra productos, existencias, precios y movimientos del inventario.
+      </p>
+    </div>
+
+    <div class="encabezado-acciones">
+      <button
+        class="btn btn-primario"
+        type="button"
+        *ngIf="puedeOperar"
+        (click)="abrirProducto()">
+        <i class="pi pi-plus"></i>
+        Nuevo producto
+      </button>
+    </div>
+  </header>
+
+  <!-- ESTADÍSTICAS -->
+  <section class="stats">
+
+    <article class="stat stat-azul">
+      <div class="stat-info">
+        <p class="stat-label">Productos registrados</p>
+        <div class="stat-valor">{{ productos.length }}</div>
+        <p class="stat-nota">Productos en el catálogo</p>
+      </div>
+      <div class="stat-icono">
+        <i class="pi pi-box"></i>
+      </div>
+    </article>
+
+    <article class="stat stat-verde">
+      <div class="stat-info">
+        <p class="stat-label">Unidades disponibles</p>
+        <div class="stat-valor">{{ totalUnidades }}</div>
+        <p class="stat-nota">Unidades en existencias</p>
+      </div>
+      <div class="stat-icono">
+        <i class="pi pi-check-circle"></i>
+      </div>
+    </article>
+
+    <article class="stat stat-ambar">
+      <div class="stat-info">
+        <p class="stat-label">Alertas de stock</p>
+        <div class="stat-valor">{{ alertasCount }}</div>
+        <p class="stat-nota">Productos con stock bajo o agotado</p>
+      </div>
+      <div class="stat-icono">
+        <i class="pi pi-exclamation-triangle"></i>
+      </div>
+    </article>
+
+    <article class="stat stat-rojo">
+      <div class="stat-info">
+        <p class="stat-label">Valor del inventario</p>
+        <div class="stat-valor">{{ moneda(valorInventario) }}</div>
+        <p class="stat-nota">Valor total de las existencias</p>
+      </div>
+      <div class="stat-icono">
+        <i class="pi pi-wallet"></i>
+      </div>
+    </article>
+
+  </section>
+
+  <!-- TABLA DE PRODUCTOS -->
+  <section class="tarjeta">
+
+    <div class="barra-controles">
+      <label class="buscador">
+        <i class="pi pi-search"></i>
+        <input
+          type="search"
+          placeholder="Buscar por producto, código o categoría..."
+          [(ngModel)]="busqueda"
+          aria-label="Buscar productos">
+      </label>
+
+      <div class="acciones-tabla">
+        <button
+          class="btn-icono-secundario btn-limpiar"
+          type="button"
+          title="Limpiar búsqueda"
+          aria-label="Limpiar búsqueda"
+          (click)="busqueda = ''">
+          <i class="pi pi-filter-slash"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+        <tr>
+          <th>Producto</th>
+          <th>Categoría</th>
+          <th>Existencias</th>
+          <th>Stock mínimo</th>
+          <th>Precio unitario</th>
+          <th>Estado del stock</th>
+          <th>Acciones</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr
+          *ngFor="let p of productosFiltrados; trackBy: trackById">
+
+          <td>
+            <div class="celda-producto">
+              <div class="icono-caja">
+                <i class="pi pi-box"></i>
+              </div>
+
+              <div class="producto-texto">
+                <div class="nombre-prod">{{ p.nombre }}</div>
+                <div class="codigo-prod">{{ p.codigo }}</div>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <span class="categoria-texto">{{ p.categoria }}</span>
+          </td>
+
+          <td>
+            <span class="stock-celda">{{ p.stock }}</span>
+          </td>
+
+          <td>{{ p.stockMinimo }}</td>
+
+          <td>
+            <span class="precio-celda">{{ moneda(p.precio) }}</span>
+          </td>
+
+          <td>
+              <span
+                class="badge"
+                [ngClass]="{
+                  'badge-verde': nivel(p) === 'Disponible',
+                  'badge-ambar': nivel(p) === 'Stock bajo',
+                  'badge-rojo': nivel(p) === 'Agotado'
+                }">
+                <span class="punto"></span>
+                {{ nivel(p) }}
+              </span>
+          </td>
+
+          <td>
+            <div class="acciones-fila">
+
+              <button
+                type="button"
+                class="btn-accion accion-entrada"
+                (click)="abrirMovimiento(p, 'Entrada')"
+                [disabled]="!puedeOperar || !p.activo"
+                title="Registrar entrada">
+                Entrada
+              </button>
+
+              <button
+                type="button"
+                class="btn-accion accion-salida"
+                (click)="abrirMovimiento(p, 'Salida')"
+                [disabled]="!puedeOperar || !p.activo || p.stock === 0"
+                title="Registrar salida">
+                Salida
+              </button>
+
+              <button
+                class="btn-accion accion-editar"
+                type="button"
+                title="Editar producto"
+                aria-label="Editar producto"
+                *ngIf="puedeOperar"
+                (click)="abrirProducto(p)">
+                <i class="pi pi-pencil"></i>
+              </button>
+
+              <button
+                class="btn-accion accion-desactivar"
+                type="button"
+                title="Cambiar estado del producto"
+                aria-label="Cambiar estado del producto"
+                *ngIf="esGerente"
+                (click)="alternarEstado(p)">
+                <i class="pi pi-sync"></i>
+              </button>
+
+            </div>
+          </td>
+
+        </tr>
+
+        <!-- ESTADO VACÍO -->
+        <tr *ngIf="productosFiltrados.length === 0">
+          <td colspan="7">
+            <div class="vacio">
+              <div class="vacio-icono">
+                <i class="pi pi-search"></i>
+              </div>
+              <strong>No se encontraron productos</strong>
+              <p>Prueba con otro nombre, código o categoría.</p>
+
+              <button
+                class="btn btn-secundario"
+                type="button"
+                (click)="busqueda = ''">
+                <i class="pi pi-filter-slash"></i>
+                Limpiar búsqueda
+              </button>
+            </div>
+          </td>
+        </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="pie-tabla">
+      <span>
+        Mostrando <strong>{{ productosFiltrados.length }}</strong>
+        de <strong>{{ productos.length }}</strong> productos
+      </span>
+
+      <span class="pie-seguridad">
+        <i class="pi pi-shield"></i>
+        Control de inventario
+      </span>
+    </footer>
+
+  </section>
+
+  <!-- HISTORIAL DE MOVIMIENTOS -->
+  <section class="tarjeta movimientos-card">
+
+    <div class="historial-intro">
+      <div class="historial-icono">
+        <i class="pi pi-history"></i>
+      </div>
+
+      <div>
+        <h2>Historial de movimientos</h2>
+        <p>Consulta las entradas y salidas registradas en el inventario.</p>
+      </div>
+
+      <span class="historial-total">
+        {{ movimientos.length }} movimientos
+      </span>
+    </div>
+
+    <div class="tabla-scroll">
+      <table class="tabla">
+        <thead>
+        <tr>
+          <th>Fecha y hora</th>
+          <th>Producto</th>
+          <th>Tipo de movimiento</th>
+          <th>Cantidad</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        <tr *ngFor="let m of movimientos; trackBy: trackByMovimientoId">
+          <td class="fecha-auditoria">
+            {{ formatearFechaHora(m.fecha) }}
+          </td>
+
+          <td>{{ m.producto }}</td>
+
+          <td>
+              <span
+                class="badge"
+                [ngClass]="m.tipo === 'Entrada' ? 'badge-verde' : 'badge-ambar'">
+                <i
+                  class="pi"
+                  [ngClass]="m.tipo === 'Entrada' ? 'pi-arrow-down-left' : 'pi-arrow-up-right'">
+                </i>
+                {{ m.tipo }}
+              </span>
+          </td>
+
+          <td>
+            <strong>{{ m.cantidad }}</strong>
+          </td>
+        </tr>
+
+        <tr *ngIf="movimientos.length === 0">
+          <td colspan="4">
+            <div class="vacio">
+              <div class="vacio-icono">
+                <i class="pi pi-history"></i>
+              </div>
+              <strong>No hay movimientos registrados</strong>
+              <p>Las entradas y salidas aparecerán aquí.</p>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="pie-tabla">
+      <span>
+        Total de movimientos:
+        <strong>{{ movimientos.length }}</strong>
+      </span>
+
+      <span class="pie-seguridad">
+        <i class="pi pi-info-circle"></i>
+        Historial de inventario
+      </span>
+    </footer>
+
+  </section>
+
+</main>
+
+<!-- MODAL: REGISTRAR / EDITAR PRODUCTO -->
+<div
+  class="overlay"
+  *ngIf="dlgProducto"
+  (click)="cerrarProducto()">
+
+  <section
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tituloModalProducto"
+    (click)="$event.stopPropagation()">
+
+    <header class="modal-head">
+      <div>
+        <div class="modal-titulo" id="tituloModalProducto">
+          <i
+            class="pi"
+            [ngClass]="editandoProducto ? 'pi-file-edit' : 'pi-box'"
+            style="color:#2563eb">
+          </i>
+          {{ editandoProducto ? 'Editar producto' : 'Registrar producto' }}
+        </div>
+
+        <p class="modal-sub">
+          {{
+            editandoProducto
+              ? 'Actualiza la información del producto seleccionado.'
+              : 'Completa los datos para registrar un producto nuevo.'
+          }}
+        </p>
+      </div>
+
+      <button
+        class="btn-icono-secundario"
+        type="button"
+        aria-label="Cerrar"
+        (click)="cerrarProducto()">
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <div class="modal-body">
+      <div class="form-grid">
+
+        <label class="campo">
+          Código <b>*</b>
+          <input
+            class="input"
+            type="text"
+            [(ngModel)]="formProducto.codigo"
+            maxlength="40"
+            placeholder="Ej. PROD-001">
+        </label>
+
+        <label class="campo">
+          Nombre del producto <b>*</b>
+          <input
+            class="input"
+            type="text"
+            [(ngModel)]="formProducto.nombre"
+            maxlength="100"
+            placeholder="Nombre del producto">
+        </label>
+
+        <label class="campo completo">
+          Categoría <b>*</b>
+          <select class="input" [(ngModel)]="formProducto.categoria">
+            <option value="">Selecciona una categoría</option>
+            <option *ngFor="let categoria of categorias" [value]="categoria">
+              {{ categoria }}
+            </option>
+          </select>
+        </label>
+
+        <label class="campo">
+          Stock inicial <b>*</b>
+          <input
+            class="input"
+            type="number"
+            min="0"
+            [(ngModel)]="formProducto.stock"
+            placeholder="0">
+        </label>
+
+        <label class="campo">
+          Stock mínimo <b>*</b>
+          <input
+            class="input"
+            type="number"
+            min="0"
+            [(ngModel)]="formProducto.stockMinimo"
+            placeholder="0">
+        </label>
+
+        <label class="campo completo">
+          Precio unitario <b>*</b>
+          <input
+            class="input"
+            type="number"
+            min="0"
+            [(ngModel)]="formProducto.precio"
+            placeholder="0">
+        </label>
+
+      </div>
+
+      <div class="nota">
+        <i class="pi pi-info-circle"></i>
+        <span>
+          Los campos marcados con * son obligatorios. Verifica el código,
+          el stock mínimo y el precio antes de guardar.
+        </span>
+      </div>
+
+      <div class="error" *ngIf="errorProducto">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorProducto }}
+      </div>
+    </div>
+
+    <footer class="modal-pie">
+      <button
+        class="btn btn-secundario"
+        type="button"
+        (click)="cerrarProducto()">
+        Cancelar
+      </button>
+
+      <button
+        class="btn btn-primario"
+        type="button"
+        (click)="guardarProducto()">
+        <i class="pi pi-check"></i>
+        {{ editandoProducto ? 'Guardar cambios' : 'Registrar producto' }}
+      </button>
+    </footer>
+
+  </section>
+</div>
+
+<!-- MODAL: REGISTRAR MOVIMIENTO -->
+<div
+  class="overlay"
+  *ngIf="dlgMovimiento"
+  (click)="dlgMovimiento = false">
+
+  <section
+    class="modal modal-chico"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tituloModalMovimiento"
+    (click)="$event.stopPropagation()">
+
+    <header class="modal-head">
+      <div>
+        <div class="modal-titulo" id="tituloModalMovimiento">
+          <i
+            class="pi"
+            [ngClass]="movTipo === 'Entrada' ? 'pi-arrow-down-left' : 'pi-arrow-up-right'"
+            [style.color]="movTipo === 'Entrada' ? '#059669' : '#d97706'">
+          </i>
+          Registrar {{ movTipo === 'Entrada' ? 'entrada' : 'salida' }}
+        </div>
+
+        <p class="modal-sub">
+          Registra el movimiento de existencias del producto seleccionado.
+        </p>
+      </div>
+
+      <button
+        class="btn-icono-secundario"
+        type="button"
+        aria-label="Cerrar"
+        (click)="dlgMovimiento = false">
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <div class="modal-body">
+
+      <div class="form-grid una-columna">
+
+        <label class="campo">
+          Tipo de movimiento
+          <select class="input" [(ngModel)]="movTipo">
+            <option *ngFor="let tipo of unidades" [value]="tipo">
+              {{ tipo }}
+            </option>
+          </select>
+        </label>
+
+        <label class="campo">
+          Cantidad <b>*</b>
+          <input
+            class="input"
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="movCantidad"
+            placeholder="Cantidad de unidades">
+        </label>
+
+      </div>
+
+      <div class="nota">
+        <i class="pi pi-info-circle"></i>
+        <span>
+          Una entrada aumenta las existencias y una salida las disminuye.
+          Verifica la cantidad antes de confirmar el movimiento.
+        </span>
+      </div>
+
+      <div class="error" *ngIf="errorMov">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorMov }}
+      </div>
+    </div>
+
+    <footer class="modal-pie">
+      <button
+        class="btn btn-secundario"
+        type="button"
+        (click)="dlgMovimiento = false">
+        Cancelar
+      </button>
+
+      <button
+        class="btn btn-primario"
+        type="button"
+        (click)="registrarMovimiento()">
+        <i class="pi pi-check"></i>
+        Registrar movimiento
+      </button>
+    </footer>
+
+  </section>
+</div>
+
+<!-- NOTIFICACIONES -->
+<div
+  class="toast"
+  *ngIf="toast"
+  [ngClass]="{
+    'toast-ok': toast.tipo === 'ok',
+    'toast-alerta': toast.tipo === 'alerta',
+    'toast-error': toast.tipo === 'error'
+  }"
+  role="status"
+  aria-live="polite">
+
+  <i
+    class="pi"
+    [ngClass]="{
+      'pi-check-circle': toast.tipo === 'ok',
+      'pi-exclamation-triangle': toast.tipo === 'alerta',
+      'pi-times-circle': toast.tipo === 'error'
+    }">
+  </i>
+
+  <span>{{ toast.texto }}</span>
+
+  <button
+    class="toast-cerrar"
+    type="button"
+    aria-label="Cerrar notificación"
+    (click)="cerrarToast()">
+    <i class="pi pi-times"></i>
+  </button>
+
+</div>

@@ -1,0 +1,607 @@
+
+:host {
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+  --slate-900: #0f172a;
+
+  --azul: #2563eb;
+  --azul-oscuro: #1d4ed8;
+
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:host,
+:host * {
+  box-sizing: border-box;
+}
+
+/* ========================================
+   CONTENEDOR PRINCIPAL
+   ======================================== */
+
+.login {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: hidden;
+  background: #f1f5f9;
+}
+
+/* ========================================
+   PANEL OSCURO DE MARCA
+   ======================================== */
+
+.panel-marca {
+  position: relative;
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 3rem;
+
+  min-width: 0;
+  min-height: 100%;
+  padding: clamp(2rem, 4vw, 4rem);
+
+  overflow: hidden;
+  isolation: isolate;
+
+  background:
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(59, 130, 246, 0.2),
+      transparent 32rem
+    ),
+    linear-gradient(
+      145deg,
+      #172554 0%,
+      #0f172a 48%,
+      #070b16 100%
+    );
+
+  color: #ffffff;
+}
+
+.panel-marca > * {
+  position: relative;
+  z-index: 1;
+}
+
+.panel-marca::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: -10rem;
+  bottom: -12rem;
+  width: 34rem;
+  height: 34rem;
+  border: 1px solid rgba(147, 197, 253, 0.12);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 3rem rgba(147, 197, 253, 0.025),
+    0 0 0 6rem rgba(147, 197, 253, 0.02);
+  pointer-events: none;
+}
+
+.panel-marca::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: -8rem;
+  right: -8rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.17);
+  filter: blur(55px);
+  pointer-events: none;
+}
+
+/* ========================================
+   IDENTIDAD DE STOCKLY
+   ======================================== */
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.marca-logo {
+  display: flex;
+  flex: 0 0 46px;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 13px;
+  background: linear-gradient(145deg, #ffffff, #dbeafe);
+  color: #0f172a ;
+
+  font-size: 1.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.marca-nombre {
+  color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.marca-sub {
+  margin-top: 0.2rem;
+  color: #a9b9d1;
+  font-size: 0.75rem;
+  font-weight: 450;
+  letter-spacing: 0.02em;
+}
+
+/* ========================================
+   PRESENTACIÓN DEL SISTEMA
+   ======================================== */
+
+.hero {
+  width: 100%;
+  max-width: 38rem;
+  margin: auto 0;
+}
+
+.etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  margin-bottom: 1.7rem;
+  padding: 0.5rem 0.85rem;
+
+  border: 1px solid rgba(147, 197, 253, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+
+  color: #dbeafe;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.etiqueta i {
+  color: #93c5fd;
+  font-size: 0.8rem;
+}
+
+.hero h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(2.3rem, 3.5vw, 3.6rem);
+  font-weight: 750;
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+}
+
+.hero p {
+  max-width: 33rem;
+  margin: 1.4rem 0 0;
+  color: #bdcbe0;
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+/* ========================================
+   INDICADORES INFORMATIVOS
+   ======================================== */
+
+.datos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.dato {
+  min-width: 0;
+  padding: 1.1rem;
+
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.045);
+
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(8px);
+}
+
+.dato strong {
+  display: block;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.dato span {
+  display: block;
+  margin-top: 0.4rem;
+  color: #9eafc8;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+/* ========================================
+   PANEL DEL FORMULARIO
+   ======================================== */
+
+.panel-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  padding: clamp(1.25rem, 4vw, 3rem);
+
+  background:
+    radial-gradient(
+      ellipse at top right,
+      rgba(219, 234, 254, 0.4),
+      transparent 50%
+    ),
+    #f8fafc;
+}
+
+.caja {
+  width: 100%;
+  max-width: 28rem;
+  min-width: 0;
+  margin: auto;
+}
+
+/* Marca que se muestra en pantallas pequeñas */
+
+.marca-movil {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 2.5rem;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.marca-movil .marca-logo {
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.2);
+}
+
+/* ========================================
+   TÍTULOS DEL FORMULARIO
+   ======================================== */
+
+h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.7rem, 3vw, 2rem);
+  font-weight: 750;
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+}
+
+.subtitulo {
+  margin: 0.7rem 0 2rem;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+
+/* ========================================
+   FORMULARIO E INPUTS
+   ======================================== */
+
+form {
+  display: grid;
+  gap: 1.3rem;
+}
+
+.campo {
+  display: block;
+  min-width: 0;
+}
+
+.campo > span {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 0.8rem 0.95rem;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  outline: none;
+
+  background: #ffffff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 0.875rem;
+
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+
+.input::placeholder {
+  color: #9aa8ba;
+}
+
+.input:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+
+.input:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.11);
+}
+
+.input:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* Campo de contraseña con botón */
+
+.con-icono {
+  position: relative;
+}
+
+.con-icono .input {
+  padding-right: 3rem;
+}
+
+.ojo {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.ojo:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.ojo:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+/* ========================================
+   ERRORES Y BOTÓN DE INGRESO
+   ======================================== */
+
+.error {
+  padding: 0.8rem 0.95rem;
+  border: 1px solid #fecdd3;
+  border-radius: 9px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+
+  width: 100%;
+  min-height: 46px;
+  padding: 0.85rem 1rem;
+
+  border: 1px solid #2563eb;
+  border-radius: 9px;
+  background: #14275c;
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+
+  box-shadow: 0 5px 12px rgba(37, 99, 235, 0.15);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #374f8c, #082485);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.25);
+  outline-offset: 3px;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ========================================
+   CREDENCIALES DE DEMOSTRACIÓN
+   ======================================== */
+
+.demo {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem;
+
+  border: 1px solid #dbeafe;
+  border-radius: 11px;
+  background: #eff6ff;
+
+  color: #475569;
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+.demo strong {
+  color: #1e3a8a;
+}
+
+.demo code {
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 0.78rem;
+}
+
+.demo ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.15rem;
+}
+
+/* ========================================
+   PIE DE PÁGINA
+   ======================================== */
+
+.legal {
+  margin: 2rem 0 0;
+  color: #94a3b8;
+  font-size: 0.73rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* ========================================
+   ESCRITORIO
+   ======================================== */
+
+@media (min-width: 1024px) {
+  .login {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .panel-marca {
+    display: flex;
+  }
+
+  .marca-movil {
+    display: none;
+  }
+
+  .panel-form {
+    padding: 2.5rem;
+  }
+
+  .caja {
+    padding: 2.5rem;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow:
+      0 24px 50px -20px rgba(15, 23, 42, 0.13),
+      0 4px 12px rgba(15, 23, 42, 0.025);
+  }
+}
+
+/* ========================================
+   PANTALLAS PEQUEÑAS
+   ======================================== */
+
+@media (max-width: 480px) {
+  .panel-form {
+    padding: 1.25rem;
+  }
+
+  .caja {
+    max-width: 100%;
+  }
+
+  .marca-movil {
+    margin-bottom: 2rem;
+  }
+
+  .subtitulo {
+    margin-bottom: 1.6rem;
+  }
+
+  form {
+    gap: 1.1rem;
+  }
+
+  .datos {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Evita animaciones excesivas si el usuario las desactiva */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

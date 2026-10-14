@@ -1,0 +1,136 @@
+<header class="topbar">
+  <div class="marca-movil">
+    <div class="marca-logo">
+      <i class="pi pi-box"></i>
+    </div>
+
+    <div class="marca-texto">
+      <strong>Kinetix IT</strong>
+      <span>Gestión de inventario</span>
+    </div>
+  </div>
+
+  <div class="saludo">
+    <div class="saludo-fecha">
+      <i class="pi pi-calendar"></i>
+      <span>{{ fechaHoy }}</span>
+    </div>
+
+    <div class="saludo-nombre">
+      Bienvenido, <strong>{{ nombreUsuario }}</strong>
+    </div>
+  </div>
+
+  <div class="acciones">
+    <div class="notificaciones-contenedor">
+      <button
+        type="button"
+        class="btn-notificaciones"
+        (click)="mostrarNotificaciones = !mostrarNotificaciones"
+        [attr.aria-expanded]="mostrarNotificaciones"
+        aria-label="Abrir notificaciones"
+        title="Notificaciones">
+
+        <i class="pi pi-bell"></i>
+
+        @if (cantidadNoLeidas > 0) {
+          <span class="notificaciones-contador">
+            {{ cantidadNoLeidas > 9 ? '9+' : cantidadNoLeidas }}
+          </span>
+        }
+      </button>
+      @if (mostrarNotificaciones) {
+        <div class="panel-notificaciones">
+
+          <div class="notificaciones-cabecera">
+            <div>
+              <h3>Notificaciones</h3>
+              <p>Tus alertas del inventario</p>
+            </div>
+
+            <button
+              type="button"
+              class="btn-cerrar-notificaciones"
+              (click)="mostrarNotificaciones = false"
+              aria-label="Cerrar notificaciones">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          @if (notificaciones.length > 0) {
+            <div class="lista-notificaciones">
+
+              @for (notificacion of notificaciones; track notificacion.id) {
+                <button
+                  type="button"
+                  class="notificacion-item"
+                  [class.no-leida]="!notificacion.leida"
+                  (click)="marcarComoLeida(notificacion.id)">
+
+                  <span
+                    class="notificacion-icono"
+                    [class.icono-alerta]="notificacion.tipo === 'alerta'"
+                    [class.icono-info]="notificacion.tipo === 'info'"
+                    [class.icono-exito]="notificacion.tipo === 'exito'">
+
+                    @if (notificacion.tipo === 'alerta') {
+                      <i class="pi pi-exclamation-triangle"></i>
+                    } @else if (notificacion.tipo === 'exito') {
+                      <i class="pi pi-check-circle"></i>
+                    } @else {
+                      <i class="pi pi-info-circle"></i>
+                    }
+                  </span>
+
+                  <span class="notificacion-contenido">
+                    <strong>{{ notificacion.titulo }}</strong>
+                    <span>{{ notificacion.mensaje }}</span>
+                    <small>
+                      {{ notificacion.fecha | date:'dd/MM/yyyy HH:mm' }}
+                    </small>
+                  </span>
+
+                  @if (!notificacion.leida) {
+                    <span class="punto-no-leido"></span>
+                  }
+                </button>
+              }
+
+            </div>
+
+            @if (cantidadNoLeidas > 0) {
+              <button
+                type="button"
+                class="btn-marcar-todas"
+                (click)="marcarTodasComoLeidas()">
+                Marcar todas como leídas
+              </button>
+            }
+          } @else {
+            <div class="notificaciones-vacias">
+              <i class="pi pi-check-circle"></i>
+              <strong>Todo al día</strong>
+              <span>No tienes notificaciones pendientes.</span>
+            </div>
+          }
+
+        </div>
+      }
+    </div>
+
+    <!-- Estado de sesión -->
+    <div class="perfil-etiqueta">
+      <span class="perfil-estado"></span>
+      <span>Sesión activa</span>
+    </div>
+
+    <!-- Avatar -->
+    <div
+      class="avatar"
+      [attr.title]="nombreUsuario"
+      [attr.aria-label]="'Usuario: ' + nombreUsuario">
+      {{ inicialesUsuario }}
+    </div>
+
+  </div>
+</header>

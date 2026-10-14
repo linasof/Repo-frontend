@@ -1,0 +1,63 @@
+<div class="login">
+
+  <!-- Panel de marca (solo escritorio) -->
+  <section class="panel-marca">
+    <div class="marca">
+      <div class="marca-logo"><i class="pi pi-star-fill"></i></div>
+      <div>
+        <div class="marca-nombre">Kinetix IT</div>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="etiqueta"><i class="pi pi-check"></i>Inventario bajo control</div>
+      <h2>Decisiones más simples, inventario más inteligente.</h2>
+      <p>Administra productos, existencias y accesos de tu equipo desde un espacio seguro, rápido y fácil de usar.</p>
+    </div>
+
+    <div class="datos">
+      <div class="dato"><strong>99.9%</strong><span>Disponibilidad</span></div>
+      <div class="dato"><strong>24/7</strong><span>Acceso seguro</span></div>
+      <div class="dato"><strong>100%</strong><span>Trazabilidad</span></div>
+    </div>
+  </section>
+
+  <!-- Formulario -->
+  <section class="panel-form">
+    <div class="caja">
+      <div class="marca-movil">
+        <div class="marca-logo"><i class="pi pi-box"></i></div>
+        <strong>Stockly</strong>
+      </div>
+
+      <h1>Bienvenido de nuevo</h1>
+      <p class="subtitulo">Ingresa tus credenciales para acceder al sistema.</p>
+
+      <form (ngSubmit)="iniciarSesion()" novalidate>
+        <label class="campo">
+          <span>Correo electrónico</span>
+          <input class="input" type="email" name="correo" autocomplete="email" placeholder="nombre@empresa.com" [(ngModel)]="correo" />
+        </label>
+
+        <label class="campo">
+          <span>Contraseña</span>
+          <div class="con-icono">
+            <input class="input" name="password" autocomplete="current-password" placeholder="Ingresa tu contraseña"
+                   [type]="verPassword ? 'text' : 'password'" [(ngModel)]="password" />
+            <button type="button" class="ojo" [attr.aria-label]="verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" (click)="verPassword = !verPassword">
+              <i class="pi" [ngClass]="verPassword ? 'pi-eye-slash' : 'pi-eye'"></i>
+            </button>
+          </div>
+        </label>
+
+        <!-- Botón de acceso directo sin validaciones engorrosas -->
+        <button type="submit" class="btn">
+          Iniciar sesión <i class="pi pi-angle-right"></i>
+        </button>
+      </form>
+
+      <p class="legal">Al continuar aceptas los términos de uso y la política de privacidad de Stockly.</p>
+    </div>
+  </section>
+
+</div>

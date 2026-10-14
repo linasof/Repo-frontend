@@ -1,0 +1,848 @@
+<app-sidbar></app-sidbar>
+<app-navbar></app-navbar>
+
+<main class="usuarios-wrapper">
+
+  <!-- ENCABEZADO -->
+  <header class="encabezado">
+    <div>
+
+      <h1>
+        <i class="pi pi-users" style="color:#2563eb"></i>
+        Gestión de usuarios
+      </h1>
+
+      <p class="subtitulo">
+        Administra usuarios, roles, estados y permisos de acceso.
+      </p>
+    </div>
+
+    <div class="encabezado-acciones">
+      <button class="btn btn-secundario"
+              type="button"
+              (click)="abrirPerfil()">
+        <i class="pi pi-user"></i>
+        Mi perfil
+      </button>
+
+      <button class="btn btn-secundario"
+              type="button"
+              *ngIf="esGerente"
+              (click)="abrirAuditoria()">
+        <i class="pi pi-history"></i>
+        Auditoría
+      </button>
+
+      <button class="btn btn-primario"
+              type="button"
+              *ngIf="puedeGestionarUsuarios"
+              (click)="abrirUsuario()">
+        <i class="pi pi-plus"></i>
+        Nuevo usuario
+      </button>
+    </div>
+  </header>
+
+  <!-- VISTA: LISTADO DE USUARIOS -->
+  <ng-container *ngIf="vistaActual === 'usuarios'">
+
+    <!-- ESTADÍSTICAS -->
+    <section class="stats">
+
+      <article class="stat stat-azul">
+        <div class="stat-info">
+          <p class="stat-label">Total de usuarios</p>
+          <div class="stat-valor">{{ totalUsuarios }}</div>
+          <p class="stat-nota">Usuarios registrados</p>
+        </div>
+        <div class="stat-icono">
+          <i class="pi pi-users"></i>
+        </div>
+      </article>
+
+      <article class="stat stat-verde">
+        <div class="stat-info">
+          <p class="stat-label">Usuarios activos</p>
+          <div class="stat-valor">{{ usuariosActivos }}</div>
+          <p class="stat-nota">Con acceso habilitado</p>
+        </div>
+        <div class="stat-icono">
+          <i class="pi pi-check-circle"></i>
+        </div>
+      </article>
+
+      <article class="stat stat-ambar">
+        <div class="stat-info">
+          <p class="stat-label">Usuarios inactivos</p>
+          <div class="stat-valor">{{ usuariosInactivos }}</div>
+          <p class="stat-nota">Acceso deshabilitado</p>
+        </div>
+        <div class="stat-icono">
+          <i class="pi pi-pause-circle"></i>
+        </div>
+      </article>
+
+      <article class="stat stat-rojo">
+        <div class="stat-info">
+          <p class="stat-label">Usuarios suspendidos</p>
+          <div class="stat-valor">{{ usuariosSuspendidos }}</div>
+          <p class="stat-nota">Acceso restringido</p>
+        </div>
+        <div class="stat-icono">
+          <i class="pi pi-shield"></i>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- TABLA PRINCIPAL -->
+    <section class="tarjeta">
+
+      <div class="barra-controles">
+
+        <label class="buscador">
+          <i class="pi pi-search"></i>
+          <input
+            type="search"
+            placeholder="Buscar por nombre, código, correo o rol..."
+            [(ngModel)]="busqueda"
+            aria-label="Buscar usuarios">
+        </label>
+
+        <div class="acciones-tabla">
+
+          <select class="filtro-select"
+                  [(ngModel)]="filtroRol"
+                  aria-label="Filtrar por rol">
+            <option value="">Todos los roles</option>
+            <option *ngFor="let rol of roles" [value]="rol">
+              {{ rol }}
+            </option>
+          </select>
+
+          <select class="filtro-select"
+                  [(ngModel)]="filtroEstado"
+                  aria-label="Filtrar por estado">
+            <option value="">Todos los estados</option>
+            <option *ngFor="let estado of estados" [value]="estado">
+              {{ estado }}
+            </option>
+          </select>
+
+          <button class="btn-icono-secundario btn-limpiar"
+                  type="button"
+                  title="Limpiar filtros"
+                  aria-label="Limpiar filtros"
+                  (click)="limpiarFiltros()">
+            <i class="pi pi-filter-slash"></i>
+          </button>
+
+        </div>
+      </div>
+
+      <div class="tabla-scroll">
+
+        <table class="tabla">
+          <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Documento</th>
+            <th>Correo electrónico</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+          </thead>
+
+          <tbody>
+
+          <tr *ngFor="let usuario of usuariosFiltrados; trackBy: trackById"
+              [class.fila-retirada]="usuario.nombre_estado_usuario !== 'Activo'">
+
+            <!-- USUARIO -->
+            <td>
+              <div class="celda-usuario">
+                <div class="avatar" [ngClass]="claseAvatar(usuario)">
+                  {{ usuario.primer_nombre.charAt(0) || 'U' }}{{ usuario.primer_apellido?.charAt(0) || '' }}
+                </div>
+
+                <div>
+                  <div class="nombre-usuario">
+                    {{ usuario.primer_nombre }} {{ usuario.primer_apellido }}
+
+                    <span class="etiqueta-tu"
+                          *ngIf="usuario.id_usuario === usuarioActualId">
+                        Tú
+                      </span>
+                  </div>
+
+                  <div class="codigo-usuario">
+                    {{ usuario.nombre_usuario }}
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- DOCUMENTO -->
+            <td>
+              <span class="correo">{{ usuario.nombre_tipo_documento }} - {{ usuario.numero_documento }}</span>
+            </td>
+
+            <!-- CORREO -->
+            <td>
+              <span class="correo">{{ usuario.correo }}</span>
+            </td>
+            <!-- ROL -->
+            <td>
+              <span class="badge" [ngClass]="claseRol(usuario.nombre_rol)">
+                {{ usuario.nombre_rol }}
+              </span>
+            </td>
+
+            <!-- ESTADO -->
+            <td>
+              <span class="badge" [ngClass]="claseEstado(usuario.nombre_estado_usuario)">
+                <span class="punto"></span>
+                {{ usuario.nombre_estado_usuario }}
+              </span>
+            </td>
+
+            <!-- ACCIONES -->
+            <td>
+              <div class="acciones-fila">
+
+                <button
+                  class="btn-accion accion-estado"
+                  type="button"
+                  title="Cambiar estado"
+                  aria-label="Cambiar estado"
+                  *ngIf="puedeGestionarUsuarios"
+                  [disabled]="usuario.id_usuario === usuarioActualId"
+                  (click)="abrirCambioEstado(usuario)">
+                  <i class="pi pi-sync"></i>
+                </button>
+
+                <button
+                  class="btn-accion accion-editar"
+                  type="button"
+                  title="Editar usuario"
+                  aria-label="Editar usuario"
+                  *ngIf="puedeGestionarUsuarios"
+                  (click)="abrirUsuario(usuario)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+
+                <button
+                  class="btn-accion accion-eliminar"
+                  type="button"
+                  title="Eliminar usuario"
+                  aria-label="Eliminar usuario"
+                  *ngIf="puedeGestionarUsuarios"
+                  [disabled]="usuario.id_usuario === usuarioActualId"
+                  (click)="abrirEliminar(usuario)">
+                  <i class="pi pi-trash"></i>
+                </button>
+
+                <span class="rol-texto"
+                      *ngIf="!puedeGestionarUsuarios">
+                    Solo lectura
+                  </span>
+
+              </div>
+            </td>
+
+          </tr>
+
+          <!-- ESTADO VACÍO -->
+          <tr *ngIf="usuariosFiltrados.length === 0">
+            <td colspan="6">
+              <div class="vacio">
+                <div class="vacio-icono">
+                  <i class="pi pi-search"></i>
+                </div>
+                <strong>No se encontraron usuarios</strong>
+                <p>Prueba con otro nombre o cambia los filtros.</p>
+
+                <button class="btn btn-secundario"
+                        type="button"
+                        (click)="limpiarFiltros()">
+                  <i class="pi pi-filter-slash"></i>
+                  Limpiar filtros
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <!-- PIE DE TABLA -->
+      <footer class="pie-tabla">
+        <span>
+          Mostrando <strong>{{ usuariosFiltrados.length }}</strong>
+          de <strong>{{ totalUsuarios }}</strong> usuarios
+        </span>
+
+        <span class="pie-seguridad">
+          <i class="pi pi-shield"></i>
+          Gestión de usuarios
+        </span>
+      </footer>
+
+    </section>
+  </ng-container>
+
+  <!-- VISTA: MI PERFIL -->
+  <ng-container *ngIf="vistaActual === 'perfil'">
+
+    <div class="perfil-layout">
+
+      <section class="perfil-card" *ngIf="usuarioSesion as usuario">
+
+        <div class="perfil-portada"></div>
+
+        <div class="perfil-avatar">
+          {{ usuario.primer_nombre.charAt(0) || 'U' }}
+        </div>
+
+        <div class="perfil-contenido">
+
+          <span class="badge" [ngClass]="claseEstado(usuario.nombre_estado_usuario)">
+            <span class="punto"></span>
+            {{ usuario.nombre_estado_usuario }}
+          </span>
+
+          <h2>{{ usuario.primer_nombre }} {{ usuario.primer_apellido }}</h2>
+
+          <p class="perfil-rol">
+            <i class="pi pi-shield"></i>
+            {{ usuario.nombre_rol }}
+          </p>
+
+          <div class="perfil-datos">
+
+            <div>
+              <span>Código de usuario (Login)</span>
+              <strong>{{ usuario.nombre_usuario }}</strong>
+            </div>
+
+            <div>
+              <span>Documento</span>
+              <strong>{{ usuario.numero_documento }}</strong>
+            </div>
+
+            <div>
+              <span>Correo electrónico</span>
+              <strong>{{ usuario.correo }}</strong>
+            </div>
+
+            <div>
+              <span>Permisos de gestión</span>
+              <strong>{{ esGerente ? 'Administrador de usuarios' : 'Acceso limitado' }}</strong>
+            </div>
+
+          </div>
+
+          <button class="btn btn-primario"
+                  type="button"
+                  (click)="abrirListado()">
+            <i class="pi pi-arrow-left"></i>
+            Volver a usuarios
+          </button>
+
+          <p class="nota-perfil">
+            <i class="pi pi-info-circle"></i>
+            La información presentada corresponde al perfil de demostración
+            de la sesión actual.
+          </p>
+
+        </div>
+      </section>
+
+      <section class="tarjeta" *ngIf="!usuarioSesion">
+        <div class="vacio">
+          <div class="vacio-icono">
+            <i class="pi pi-user"></i>
+          </div>
+          <strong>Perfil no disponible</strong>
+          <p>No se encontró el usuario asociado a esta sesión.</p>
+          <button class="btn btn-secundario"
+                  type="button"
+                  (click)="abrirListado()">
+            Volver a usuarios
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </ng-container>
+
+  <!-- VISTA: AUDITORÍA -->
+  <ng-container *ngIf="vistaActual === 'auditoria'">
+
+    <section class="tarjeta historial-card">
+
+      <div class="historial-intro">
+        <div class="historial-icono">
+          <i class="pi pi-history"></i>
+        </div>
+
+        <div>
+          <h2>Historial de auditoría</h2>
+          <p>Registro local de las acciones realizadas en este módulo.</p>
+        </div>
+
+        <span class="historial-total">
+          {{ historialFiltrado.length }} registros
+        </span>
+      </div>
+
+      <div class="barra-controles">
+        <label class="buscador">
+          <i class="pi pi-search"></i>
+          <input
+            type="search"
+            placeholder="Buscar por usuario, acción o detalle..."
+            [(ngModel)]="busqueda"
+            aria-label="Buscar en auditoría">
+        </label>
+
+        <button class="btn btn-secundario"
+                type="button"
+                (click)="abrirListado()">
+          <i class="pi pi-arrow-left"></i>
+          Volver a usuarios
+        </button>
+      </div>
+
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+          <tr>
+            <th>Fecha y hora</th>
+            <th>Usuario responsable</th>
+            <th>Acción</th>
+            <th>Detalle</th>
+            <th>Tipo</th>
+          </tr>
+          </thead>
+
+          <tbody>
+          <tr *ngFor="let registro of historialFiltrado; trackBy: trackById">
+
+            <td class="fecha-auditoria">
+              {{ formatearFechaHora(registro.fecha) }}
+            </td>
+
+            <td>{{ registro.usuario }}</td>
+
+            <td>
+              <strong>{{ registro.accion }}</strong>
+            </td>
+
+            <td>
+              <div class="detalle-auditoria">
+                {{ registro.detalle }}
+              </div>
+            </td>
+
+            <td>
+                <span class="badge"
+                      [ngClass]="{
+                        'badge-verde': registro.tipo === 'ok',
+                        'badge-ambar': registro.tipo === 'alerta',
+                        'badge-rojo': registro.tipo === 'error',
+                        'badge-azul': registro.tipo === 'info'
+                      }">
+                  {{ registro.tipo === 'ok' ? 'Correcto' :
+                  registro.tipo === 'alerta' ? 'Advertencia' :
+                    registro.tipo === 'error' ? 'Eliminación' : 'Información' }}
+                </span>
+            </td>
+
+          </tr>
+
+          <tr *ngIf="historialFiltrado.length === 0">
+            <td colspan="5">
+              <div class="vacio">
+                <div class="vacio-icono">
+                  <i class="pi pi-history"></i>
+                </div>
+                <strong>No hay registros disponibles</strong>
+                <p>No se encontraron coincidencias con la búsqueda.</p>
+              </div>
+            </td>
+          </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+      <footer class="pie-tabla">
+        <span>
+          Total de registros visibles:
+          <strong>{{ historialFiltrado.length }}</strong>
+        </span>
+
+        <span class="pie-seguridad">
+          <i class="pi pi-info-circle"></i>
+          Auditoría local de demostración
+        </span>
+      </footer>
+
+    </section>
+  </ng-container>
+
+</main>
+
+<!-- MODAL: REGISTRAR / EDITAR USUARIO -->
+<div class="overlay"
+     *ngIf="dlgUsuario"
+     (click)="cerrarUsuario()">
+
+  <section class="modal"
+           role="dialog"
+           aria-modal="true"
+           aria-labelledby="tituloModalUsuario"
+           (click)="$event.stopPropagation()">
+
+    <header class="modal-head">
+      <div>
+        <div class="modal-titulo" id="tituloModalUsuario">
+          <i class="pi"
+             [ngClass]="editandoUsuario ? 'pi-user-edit' : 'pi-user-plus'"
+             style="color:#2563eb"></i>
+
+          {{ editandoUsuario ? 'Editar usuario' : 'Registrar usuario' }}
+        </div>
+
+        <p class="modal-sub">
+          {{ editandoUsuario
+          ? 'Actualiza los datos del usuario seleccionado.'
+          : 'Completa la información para crear un nuevo usuario.' }}
+        </p>
+      </div>
+
+      <button class="btn-icono-secundario"
+              type="button"
+              aria-label="Cerrar"
+              (click)="cerrarUsuario()">
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <div class="modal-body">
+
+      <div class="form-grid">
+
+        <label class="campo completo">
+          Nombre de usuario (Login) <b>*</b>
+          <input class="input"
+                 type="text"
+                 [(ngModel)]="formUsuario.nombre_usuario"
+                 maxlength="50"
+                 placeholder="Ej. jperez">
+        </label>
+
+        <label class="campo">
+          Primer Nombre <b>*</b>
+          <input class="input"
+                 type="text"
+                 [(ngModel)]="formUsuario.primer_nombre"
+                 maxlength="50"
+                 placeholder="Ej. Juan">
+        </label>
+
+        <label class="campo">
+          Segundo Nombre
+          <input class="input"
+                 type="text"
+                 [(ngModel)]="formUsuario.segundo_nombre"
+                 maxlength="50"
+                 placeholder="Opcional">
+        </label>
+
+        <label class="campo">
+          Primer Apellido <b>*</b>
+          <input class="input"
+                 type="text"
+                 [(ngModel)]="formUsuario.primer_apellido"
+                 maxlength="50"
+                 placeholder="Ej. Pérez">
+        </label>
+
+        <label class="campo">
+          Segundo Apellido
+          <input class="input"
+                 type="text"
+                 [(ngModel)]="formUsuario.segundo_apellido"
+                 maxlength="50"
+                 placeholder="Opcional">
+        </label>
+
+        <label class="campo">
+          Tipo Documento <b>*</b>
+          <select class="input"
+                  [(ngModel)]="formUsuario.id_tipo_documento">
+            <option value="1">Cédula de Ciudadanía</option>
+            <option value="2">Pasaporte</option>
+          </select>
+        </label>
+
+        <label class="campo">
+          Número de Documento <b>*</b>
+          <input class="input"
+                 type="text"
+                 [(ngModel)]="formUsuario.numero_documento"
+                 maxlength="30"
+                 placeholder="Ej. 1011111111">
+        </label>
+
+        <label class="campo">
+          Correo electrónico <b>*</b>
+          <input class="input"
+                 type="email"
+                 [(ngModel)]="formUsuario.correo"
+                 maxlength="50"
+                 placeholder="usuario@empresa.com">
+        </label>
+
+        <label class="campo" *ngIf="!editandoUsuario">
+          Contraseña <b>*</b>
+          <input class="input"
+                 type="password"
+                 [(ngModel)]="formUsuario.contrasenia"
+                 placeholder="Crea una contraseña segura">
+        </label>
+
+        <label class="campo">
+          Rol <b>*</b>
+          <select class="input"
+                  [(ngModel)]="formUsuario.id_rol">
+            <option value="1">Administrador</option>
+            <option value="2">Gerente</option>
+          </select>
+        </label>
+
+        <label class="campo">
+          Estado <b>*</b>
+          <select class="input"
+                  [(ngModel)]="formUsuario.id_estado_usuario">
+            <option value="1">Activo</option>
+            <option value="2">Inactivo</option>
+            <option value="3">Suspendido</option>
+          </select>
+        </label>
+
+      </div>
+
+      <div class="nota" style="margin-top: 15px;">
+        <i class="pi pi-info-circle"></i>
+        <span>
+          Los campos marcados con * son obligatorios.
+          El correo debe ser único dentro de los usuarios registrados.
+        </span>
+      </div>
+
+      <div class="error" *ngIf="errorUsuario" style="color: red; margin-top: 10px;">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorUsuario }}
+      </div>
+
+    </div>
+
+    <footer class="modal-pie">
+      <button class="btn btn-secundario"
+              type="button"
+              (click)="cerrarUsuario()">
+        Cancelar
+      </button>
+
+      <button class="btn btn-primario"
+              type="button"
+              (click)="guardarUsuario()">
+        <i class="pi pi-check"></i>
+        {{ editandoUsuario ? 'Guardar cambios' : 'Registrar usuario' }}
+      </button>
+    </footer>
+
+  </section>
+</div>
+
+<!-- MODAL: CAMBIAR ESTADO -->
+<div class="overlay"
+     *ngIf="dlgEstado"
+     (click)="cerrarCambioEstado()">
+
+  <section class="modal modal-chico"
+           role="dialog"
+           aria-modal="true"
+           aria-labelledby="tituloModalEstado"
+           (click)="$event.stopPropagation()">
+
+    <header class="modal-head">
+      <div>
+        <div class="modal-titulo" id="tituloModalEstado">
+          <i class="pi pi-sync" style="color:#d97706"></i>
+          Cambiar estado
+        </div>
+
+        <p class="modal-sub" *ngIf="usuarioEstado">
+          {{ usuarioEstado.primer_nombre }} {{ usuarioEstado.primer_apellido }}
+        </p>
+      </div>
+
+      <button class="btn-icono-secundario"
+              type="button"
+              aria-label="Cerrar"
+              (click)="cerrarCambioEstado()">
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <div class="modal-body">
+
+      <div class="opciones-estado">
+
+        <button class="opcion-estado"
+                [class.seleccionado]="nuevoEstado === 'Activo'"
+                type="button"
+                (click)="nuevoEstado = 'Activo'">
+          <i class="pi pi-check-circle" style="color:#059669"></i>
+          Activo
+          <i class="pi pi-check" *ngIf="nuevoEstado === 'Activo'"></i>
+        </button>
+
+        <button class="opcion-estado"
+                [class.seleccionado]="nuevoEstado === 'Inactivo'"
+                type="button"
+                (click)="nuevoEstado = 'Inactivo'">
+          <i class="pi pi-pause-circle" style="color:#d97706"></i>
+          Inactivo
+          <i class="pi pi-check" *ngIf="nuevoEstado === 'Inactivo'"></i>
+        </button>
+
+        <button class="opcion-estado"
+                [class.seleccionado]="nuevoEstado === 'Suspendido'"
+                type="button"
+                (click)="nuevoEstado = 'Suspendido'">
+          <i class="pi pi-ban" style="color:#e11d48"></i>
+          Suspendido
+          <i class="pi pi-check" *ngIf="nuevoEstado === 'Suspendido'"></i>
+        </button>
+
+      </div>
+
+      <div class="nota">
+        <i class="pi pi-info-circle"></i>
+        <span>
+          Cambiar el estado modifica el registro local de este usuario.
+          La aplicación de restricciones reales de acceso requiere validación
+          en el servidor.
+        </span>
+      </div>
+
+      <div class="error" *ngIf="errorEstado">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorEstado }}
+      </div>
+
+    </div>
+
+    <footer class="modal-pie">
+      <button class="btn btn-secundario"
+              type="button"
+              (click)="cerrarCambioEstado()">
+        Cancelar
+      </button>
+
+      <button class="btn btn-primario"
+              type="button"
+              (click)="guardarEstado()">
+        <i class="pi pi-check"></i>
+        Guardar estado
+      </button>
+    </footer>
+
+  </section>
+</div>
+
+<!-- MODAL: ELIMINAR USUARIO -->
+<div class="overlay"
+     *ngIf="dlgEliminar"
+     (click)="cerrarEliminar()">
+
+  <section class="modal modal-chico"
+           role="alertdialog"
+           aria-modal="true"
+           aria-labelledby="tituloEliminar"
+           (click)="$event.stopPropagation()">
+
+    <div class="confirmacion-icono">
+      <i class="pi pi-trash"></i>
+    </div>
+
+    <h2 class="confirmacion-titulo" id="tituloEliminar">
+      ¿Eliminar usuario?
+    </h2>
+
+    <p class="confirmacion-texto" *ngIf="usuarioEliminar">
+      Vas a eliminar a
+      <strong>{{ usuarioEliminar.primer_nombre }} {{ usuarioEliminar.primer_apellido }}</strong>.
+      Esta acción no se puede deshacer desde esta pantalla.
+    </p>
+
+    <div class="modal-body" *ngIf="errorEliminar">
+      <div class="error">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorEliminar }}
+      </div>
+    </div>
+
+    <footer class="modal-pie confirmacion-pie">
+      <button class="btn btn-secundario"
+              type="button"
+              (click)="cerrarEliminar()">
+        Cancelar
+      </button>
+
+      <button class="btn btn-peligro"
+              type="button"
+              (click)="confirmarEliminar()">
+        <i class="pi pi-trash"></i>
+        Sí, eliminar
+      </button>
+    </footer>
+
+  </section>
+</div>
+
+<!-- NOTIFICACIONES -->
+<div class="toast"
+     *ngIf="toast"
+     [ngClass]="{
+       'toast-ok': toast.tipo === 'ok',
+       'toast-alerta': toast.tipo === 'alerta',
+       'toast-error': toast.tipo === 'error'
+     }"
+     role="status"
+     aria-live="polite">
+
+  <i class="pi"
+     [ngClass]="{
+       'pi-check-circle': toast.tipo === 'ok',
+       'pi-exclamation-triangle': toast.tipo === 'alerta',
+       'pi-times-circle': toast.tipo === 'error'
+     }"></i>
+
+  <span>{{ toast.texto }}</span>
+
+  <button class="toast-cerrar"
+          type="button"
+          aria-label="Cerrar notificación"
+          (click)="cerrarToast()">
+    <i class="pi pi-times"></i>
+  </button>
+
+</div>
