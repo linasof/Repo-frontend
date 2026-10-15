@@ -157,7 +157,7 @@
           <tbody>
 
           <tr *ngFor="let usuario of usuariosFiltrados; trackBy: trackById"
-              [class.fila-retirada]="usuario.nombre_estado_usuario !== 'Activo'">
+              [class.fila-retirada]="usuario.nombre_estado_usuario === 'Retirado'">
 
             <!-- USUARIO -->
             <td>
@@ -586,7 +586,7 @@
           <select class="input"
                   [(ngModel)]="formUsuario.id_tipo_documento">
             <option value="1">Cédula de Ciudadanía</option>
-            <option value="2">Pasaporte</option>
+            <option value="2">Cédula de extranjería</option>
           </select>
         </label>
 
@@ -621,7 +621,8 @@
           <select class="input"
                   [(ngModel)]="formUsuario.id_rol">
             <option value="1">Administrador</option>
-            <option value="2">Gerente</option>
+            <option value="2">Vendedor</option>
+            <option value="3">Auxiliar administrativo</option>
           </select>
         </label>
 
@@ -629,9 +630,10 @@
           Estado <b>*</b>
           <select class="input"
                   [(ngModel)]="formUsuario.id_estado_usuario">
-            <option value="1">Activo</option>
-            <option value="2">Inactivo</option>
-            <option value="3">Suspendido</option>
+            <option value="1">Contratado</option>
+            <option value="2">Suspendido</option>
+            <option value="3">En vacaciones</option>
+            <option value="4">Retirado</option>
           </select>
         </label>
 
@@ -706,21 +708,21 @@
       <div class="opciones-estado">
 
         <button class="opcion-estado"
-                [class.seleccionado]="nuevoEstado === 'Activo'"
+                [class.seleccionado]="nuevoEstado === 'Contratado'"
                 type="button"
-                (click)="nuevoEstado = 'Activo'">
+                (click)="nuevoEstado = 'Contratado'">
           <i class="pi pi-check-circle" style="color:#059669"></i>
-          Activo
-          <i class="pi pi-check" *ngIf="nuevoEstado === 'Activo'"></i>
+          Contratado
+          <i class="pi pi-check" *ngIf="nuevoEstado === 'Contratado'"></i>
         </button>
 
         <button class="opcion-estado"
-                [class.seleccionado]="nuevoEstado === 'Inactivo'"
+                [class.seleccionado]="nuevoEstado === 'En vacaciones'"
                 type="button"
-                (click)="nuevoEstado = 'Inactivo'">
-          <i class="pi pi-pause-circle" style="color:#d97706"></i>
-          Inactivo
-          <i class="pi pi-check" *ngIf="nuevoEstado === 'Inactivo'"></i>
+                (click)="nuevoEstado = 'En vacaciones'">
+          <i class="pi pi-sun" style="color:#d97706"></i>
+          En vacaciones
+          <i class="pi pi-check" *ngIf="nuevoEstado === 'En vacaciones'"></i>
         </button>
 
         <button class="opcion-estado"
@@ -732,14 +734,22 @@
           <i class="pi pi-check" *ngIf="nuevoEstado === 'Suspendido'"></i>
         </button>
 
+        <button class="opcion-estado"
+                [class.seleccionado]="nuevoEstado === 'Retirado'"
+                type="button"
+                (click)="nuevoEstado = 'Retirado'">
+          <i class="pi pi-times-circle" style="color:#64748b"></i>
+          Retirado
+          <i class="pi pi-check" *ngIf="nuevoEstado === 'Retirado'"></i>
+        </button>
+
       </div>
 
       <div class="nota">
         <i class="pi pi-info-circle"></i>
         <span>
-          Cambiar el estado modifica el registro local de este usuario.
-          La aplicación de restricciones reales de acceso requiere validación
-          en el servidor.
+          El estado se guarda en el servidor. Los usuarios suspendidos o
+          retirados no pueden iniciar sesión.
         </span>
       </div>
 

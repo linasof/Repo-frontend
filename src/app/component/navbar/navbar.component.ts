@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Auth } from '../../service/auth';
 
 interface Notificacion {
   id: number;
@@ -16,6 +17,8 @@ interface Notificacion {
   templateUrl: './navbar.component.html',
 })
 export class NavbarComponent {
+  constructor(private auth: Auth) {}
+
   dlgAlertas = false;
 
   mostrarNotificaciones = false;
@@ -63,12 +66,21 @@ export class NavbarComponent {
     return f.charAt(0).toUpperCase() + f.slice(1);
   }
 
+  // nombre e inicial del usuario que inició sesión
   get nombreUsuario(): string {
-    return 'Lspatino';
+    const sesion = this.auth.obtenerSesion();
+    if (!sesion) {
+      return 'Usuario';
+    }
+    return `${sesion.primer_nombre} ${sesion.primer_apellido}`;
   }
 
   get inicialesUsuario(): string {
-    return 'L';
+    const sesion = this.auth.obtenerSesion();
+    if (!sesion) {
+      return 'U';
+    }
+    return (sesion.primer_nombre.charAt(0) + sesion.primer_apellido.charAt(0)).toUpperCase();
   }
 
   marcarComoLeida(id: number): void {

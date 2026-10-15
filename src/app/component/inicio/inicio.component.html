@@ -50,9 +50,10 @@
           </div>
         </label>
 
-        <!-- Botón de acceso directo sin validaciones engorrosas -->
-        <button type="submit" class="btn">
-          Iniciar sesión <i class="pi pi-angle-right"></i>
+        <p class="error-login" *ngIf="error">{{ error }}</p>
+
+        <button type="submit" class="btn" [disabled]="cargando">
+          {{ cargando ? 'Ingresando...' : 'Iniciar sesión' }} <i class="pi pi-angle-right"></i>
         </button>
       </form>
 
