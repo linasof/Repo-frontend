@@ -605,3 +605,12 @@ form {
     animation-duration: 0.01ms !important;
   }
 }
+
+.error-login {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}

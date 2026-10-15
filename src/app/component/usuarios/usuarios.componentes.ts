@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Usuario } from '../../model/usuario';
 import { UsuarioService } from '../../service/usuario.service';
+import { Auth } from '../../service/auth';
 
 @Component({
   selector: 'app-usuarios',
@@ -27,8 +28,10 @@ export class UsuariosComponentes implements OnInit {
   busqueda: string = '';
   filtroRol: string = '';
   filtroEstado: string = '';
-  roles: string[] = ['Administrador', 'Gerente']; 
-  estados: string[] = ['Activo', 'Inactivo', 'Suspendido'];
+  // mismos nombres e ids que las tablas rol y estado_usuario de la bd
+  roles: string[] = ['Administrador', 'Vendedor', 'Auxiliar administrativo'];
+  estados: string[] = ['Contratado', 'Suspendido', 'En vacaciones', 'Retirado'];
+  idsEstado: { [nombre: string]: number } = { 'Contratado': 1, 'Suspendido': 2, 'En vacaciones': 3, 'Retirado': 4 };
 
   dlgUsuario: boolean = false;
   editandoUsuario: boolean = false;
@@ -46,9 +49,14 @@ export class UsuariosComponentes implements OnInit {
   historialFiltrado: any[] = [];
   toast: { tipo: string, texto: string } | null = null;
 
-  constructor(private usuarioService: UsuarioService) {}
+  constructor(private usuarioService: UsuarioService, private cdr: ChangeDetectorRef, private auth: Auth) {}
 
   ngOnInit(): void {
+    // el usuario marcado como "Tú" es el que inició sesión
+    const sesion = this.auth.obtenerSesion();
+    if (sesion) {
+      this.usuarioActualId = sesion.id_usuario;
+    }
     this.cargarUsuarios();
   }
 
@@ -74,17 +82,19 @@ export class UsuariosComponentes implements OnInit {
         this.listaUsuarios = datos.map((u: any) => ({
           ...u,
           nombre_rol: u.nombre_rol || u.rol || 'Sin Rol',
-          nombre_estado_usuario: u.nombre_estado_usuario || u.estado || u.nombre_estado || 'Activo',
+          nombre_estado_usuario: u.nombre_estado_usuario || u.estado || u.nombre_estado || 'Contratado',
           nombre_tipo_documento: u.nombre_tipo_documento || u.tipo_documento || 'CC'
         }));
 
     
         this.usuariosFiltrados = [...this.listaUsuarios];
         this.calcularEstadisticas();
-        if (this.listaUsuarios.length > 0) this.usuarioSesion = this.listaUsuarios[0];
+        this.usuarioSesion = this.listaUsuarios.find(u => u.id_usuario === this.usuarioActualId) || null;
+        this.cdr.markForCheck(); // para que la tabla se pinte apenas llegan los datos
       },
       error: (err) => {
         this.mostrarToast('error', 'Error al conectar con el backend.');
+        this.cdr.markForCheck();
         console.error(err);
       }
     });
@@ -125,6 +135,7 @@ export class UsuariosComponentes implements OnInit {
         error: (err) => {
           console.error(err);
           this.errorUsuario = 'Error al actualizar. Revisa la consola (F12).';
+          this.cdr.markForCheck();
         }
       });
     } else {
@@ -137,6 +148,7 @@ export class UsuariosComponentes implements OnInit {
         error: (err) => {
           console.error(err);
           this.errorUsuario = 'Error al crear. Verifica que el usuario o documento no existan ya.';
+          this.cdr.markForCheck();
         }
       });
     }
@@ -172,7 +184,30 @@ export class UsuariosComponentes implements OnInit {
   cerrarEliminar(): void { this.dlgEliminar = false; this.usuarioEliminar = null; }
   abrirCambioEstado(usuario: Usuario): void { this.usuarioEstado = usuario; this.nuevoEstado = usuario.nombre_estado_usuario || ''; this.errorEstado = ''; this.dlgEstado = true; }
   cerrarCambioEstado(): void { this.dlgEstado = false; this.usuarioEstado = null; }
-  guardarEstado(): void { this.cerrarCambioEstado(); }
+  guardarEstado(): void {
+    this.errorEstado = '';
+    if (!this.usuarioEstado || !this.usuarioEstado.id_usuario) {
+      return;
+    }
+    const idEstado = this.idsEstado[this.nuevoEstado];
+    if (!idEstado) {
+      this.errorEstado = 'Selecciona un estado.';
+      return;
+    }
+    // se manda el usuario completo con el estado nuevo al actualizar del back
+    const datos: Usuario = { ...this.usuarioEstado, id_estado_usuario: idEstado };
+    this.usuarioService.actualizarUsuario(this.usuarioEstado.id_usuario, datos).subscribe({
+      next: () => {
+        this.mostrarToast('ok', 'Estado actualizado.');
+        this.cerrarCambioEstado();
+        this.cargarUsuarios();
+      },
+      error: (err) => {
+        this.errorEstado = err?.error?.message || 'No se pudo cambiar el estado.';
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   abrirPerfil(): void { this.vistaActual = 'perfil'; }
   abrirAuditoria(): void { this.vistaActual = 'auditoria'; }
@@ -189,17 +224,18 @@ export class UsuariosComponentes implements OnInit {
 
   calcularEstadisticas(): void {
     this.totalUsuarios = this.listaUsuarios.length;
-    this.usuariosActivos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Activo').length;
-    this.usuariosInactivos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Inactivo').length;
+    // activos: los que pueden entrar al sistema, inactivos: los retirados
+    this.usuariosActivos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Contratado' || u.nombre_estado_usuario === 'En vacaciones').length;
+    this.usuariosInactivos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Retirado').length;
     this.usuariosSuspendidos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Suspendido').length;
   }
 
   limpiarFiltros(): void { this.busqueda = ''; this.filtroRol = ''; this.filtroEstado = ''; this.usuariosFiltrados = this.listaUsuarios; }
-  mostrarToast(tipo: string, texto: string): void { this.toast = { tipo, texto }; setTimeout(() => this.cerrarToast(), 4000); }
+  mostrarToast(tipo: string, texto: string): void { this.toast = { tipo, texto }; this.cdr.markForCheck(); setTimeout(() => { this.cerrarToast(); this.cdr.markForCheck(); }, 4000); }
   cerrarToast(): void { this.toast = null; }
   trackById(index: number, item: Usuario): any { return item.id_usuario; }
   formatearFechaHora(fecha: string): string { return new Date(fecha).toLocaleString(); }
-  claseRol(rol?: string): string { if (rol === 'Administrador') return 'badge-info'; if (rol === 'Gerente') return 'badge-purpura'; return 'badge-gris'; }
-  claseEstado(estado?: string): string { if (estado === 'Activo') return 'badge-verde'; if (estado === 'Suspendido') return 'badge-rojo'; return 'badge-ambar'; }
+  claseRol(rol?: string): string { if (rol === 'Administrador') return 'badge-info'; if (rol === 'Vendedor') return 'badge-purpura'; return 'badge-gris'; }
+  claseEstado(estado?: string): string { if (estado === 'Contratado') return 'badge-verde'; if (estado === 'Suspendido' || estado === 'Retirado') return 'badge-rojo'; return 'badge-ambar'; }
   claseAvatar(usuario: Usuario): string { return 'avatar-azul'; }
 }
