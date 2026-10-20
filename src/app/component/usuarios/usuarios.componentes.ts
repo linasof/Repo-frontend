@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Usuario } from '../../model/usuario';
 import { UsuarioService } from '../../service/usuario.service';
 import { Auth } from '../../service/auth';
+import { AuditoriaService, RegistroBitacora } from '../../service/auditoria.service';
 
 @Component({
   selector: 'app-usuarios',
@@ -12,14 +13,14 @@ import { Auth } from '../../service/auth';
 export class UsuariosComponentes implements OnInit {
 
   vistaActual: string = 'usuarios';
-  esGerente: boolean = true; 
+  esGerente: boolean = true;
   puedeGestionarUsuarios: boolean = true;
   usuarioActualId: number = 1;
   usuarioSesion: Usuario | null = null;
 
   listaUsuarios: Usuario[] = [];
   usuariosFiltrados: Usuario[] = [];
-  
+
   totalUsuarios: number = 0;
   usuariosActivos: number = 0;
   usuariosInactivos: number = 0;
@@ -48,8 +49,15 @@ export class UsuariosComponentes implements OnInit {
 
   historialFiltrado: any[] = [];
   toast: { tipo: string, texto: string } | null = null;
+  historialAuditoria: RegistroBitacora[] = [];
+  cargandoAuditoria: boolean = false;
 
-  constructor(private usuarioService: UsuarioService, private cdr: ChangeDetectorRef, private auth: Auth) {}
+  constructor(
+    private usuarioService: UsuarioService,
+    private cdr: ChangeDetectorRef,
+    private auth: Auth,
+    private auditoriaService: AuditoriaService
+  ) {}
 
   ngOnInit(): void {
     // el usuario marcado como "Tú" es el que inició sesión
@@ -86,7 +94,7 @@ export class UsuariosComponentes implements OnInit {
           nombre_tipo_documento: u.nombre_tipo_documento || u.tipo_documento || 'CC'
         }));
 
-    
+
         this.usuariosFiltrados = [...this.listaUsuarios];
         this.calcularEstadisticas();
         this.usuarioSesion = this.listaUsuarios.find(u => u.id_usuario === this.usuarioActualId) || null;
@@ -104,21 +112,21 @@ export class UsuariosComponentes implements OnInit {
     this.errorUsuario = '';
     console.log("1. Datos antes de procesar:", this.formUsuario);
 
-   
-    if (!this.formUsuario.nombre_usuario || !this.formUsuario.primer_nombre || 
-        !this.formUsuario.primer_apellido || !this.formUsuario.correo || 
-        !this.formUsuario.numero_documento) {
+
+    if (!this.formUsuario.nombre_usuario || !this.formUsuario.primer_nombre ||
+      !this.formUsuario.primer_apellido || !this.formUsuario.correo ||
+      !this.formUsuario.numero_documento) {
       this.errorUsuario = 'Faltan campos obligatorios (*).';
       return;
     }
 
-    
+
     if (!this.editandoUsuario && !this.formUsuario.contrasenia) {
       this.errorUsuario = 'La contraseña es obligatoria para usuarios nuevos.';
       return;
     }
 
-  
+
     this.formUsuario.id_rol = Number(this.formUsuario.id_rol);
     this.formUsuario.id_tipo_documento = Number(this.formUsuario.id_tipo_documento);
     this.formUsuario.id_estado_usuario = Number(this.formUsuario.id_estado_usuario);
@@ -170,7 +178,7 @@ export class UsuariosComponentes implements OnInit {
   abrirUsuario(usuario?: Usuario): void {
     if (usuario) {
       this.editandoUsuario = true;
-      this.formUsuario = { ...usuario }; 
+      this.formUsuario = { ...usuario };
     } else {
       this.editandoUsuario = false;
       this.formUsuario = this.inicializarUsuarioVacio();
@@ -210,7 +218,32 @@ export class UsuariosComponentes implements OnInit {
   }
 
   abrirPerfil(): void { this.vistaActual = 'perfil'; }
-  abrirAuditoria(): void { this.vistaActual = 'auditoria'; }
+
+
+  /* Metodo para abrir la auditoria de usuarios */
+  abrirAuditoria(): void {
+    this.vistaActual = 'auditoria';
+    this.cargarHistorialAuditoria();
+  }
+
+  cargarHistorialAuditoria(): void {
+    this.cargandoAuditoria = true;
+    this.auditoriaService.obtenerHistorial().subscribe({
+      next: (respuesta) => {
+        if (respuesta.status === 'success') {
+          this.historialAuditoria = respuesta.data;
+        }
+        this.cargandoAuditoria = false;
+        this.cdr.markForCheck();
+      },
+      error: (err) => {
+        console.error('Error al cargar la auditoría:', err);
+        this.cargandoAuditoria = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   abrirListado(): void { this.vistaActual = 'usuarios'; }
 
   inicializarUsuarioVacio(): Usuario {

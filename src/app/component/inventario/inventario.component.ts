@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { Inventario } from '../../service/inventario';
 
 type RolInventario =
-  | 'Gerente'
+  | 'Administrador'
   | 'Auxiliar administrativo'
   | 'Vendedor';
 
@@ -19,6 +20,8 @@ interface Producto {
   stock: number;
   stockMinimo: number;
   activo: boolean;
+  id_categoria?: number;
+  id_estado_producto?: number;
 }
 
 interface FormularioProducto {
@@ -29,6 +32,8 @@ interface FormularioProducto {
   precio: number;
   stock: number;
   stockMinimo: number;
+  id_categoria: number;
+  id_estado_producto: number;
 }
 
 interface MovimientoInventario {
@@ -55,88 +60,27 @@ interface ToastInventario {
   templateUrl: './inventario.component.html',
   styleUrl: './inventario.component.css',
 })
-export class InventarioComponent {
-  // Usuario y permisos
-  rolActual: RolInventario = 'Gerente';
+export class InventarioComponent implements OnInit {
+  rolActual: RolInventario = 'Administrador';
   usuarioActual = 'Lspatino';
 
-  // Búsqueda
   busqueda = '';
-
-  // Ventanas
   dlgProducto = false;
   dlgMovimiento = false;
 
-  // Producto seleccionado
   editandoProducto: Producto | null = null;
   movProducto: Producto | null = null;
 
-  // Movimiento de inventario
   movTipo: TipoMovimiento = 'Entrada';
   movCantidad = 1;
 
-  // Validaciones
   errorProducto = '';
   errorMov = '';
-
-  // Notificación
   toast: ToastInventario | null = null;
 
-  private siguienteId = 5;
-  private siguienteMovimientoId = 1;
-
-  // Productos de demostración
-  productos: Producto[] = [
-    {
-      id: 1,
-      codigo: 'CAL-001',
-      nombre: 'Tacón negro clásico',
-      categoria: 'Calzado',
-      unidad: 'Par',
-      precio: 120000,
-      stock: 12,
-      stockMinimo: 5,
-      activo: true,
-    },
-    {
-      id: 2,
-      codigo: 'BOL-001',
-      nombre: 'Bolso de mano café',
-      categoria: 'Bolsos',
-      unidad: 'Unidad',
-      precio: 95000,
-      stock: 4,
-      stockMinimo: 8,
-      activo: true,
-    },
-    {
-      id: 3,
-      codigo: 'ROP-001',
-      nombre: 'Blusa de seda blanca',
-      categoria: 'Ropa',
-      unidad: 'Unidad',
-      precio: 68000,
-      stock: 7,
-      stockMinimo: 3,
-      activo: true,
-    },
-    {
-      id: 4,
-      codigo: 'BIS-001',
-      nombre: 'Aretes de plata',
-      categoria: 'Bisutería',
-      unidad: 'Unidad',
-      precio: 45000,
-      stock: 0,
-      stockMinimo: 5,
-      activo: true,
-    },
-  ];
-
-  // Historial de movimientos
+  productos: Producto[] = [];
   movimientos: MovimientoInventario[] = [];
 
-  // Opciones de los formularios
   categorias: string[] = [
     'Calzado',
     'Ropa',
@@ -145,33 +89,88 @@ export class InventarioComponent {
     'Bisutería'
   ];
 
-  unidades: string[] = [
+  listaUnidadesMedida: string[] = [
     'Unidad',
     'Par',
     'Caja',
-    'Paquete',
+    'Metro',
+    'Kilogramo'
   ];
+
+  formParameterCategoriasMap: { [key: string]: number } = {
+    'Calzado': 1,
+    'Ropa': 2,
+    'Bolsos': 3,
+    'Accesorios': 4,
+    'Bisutería': 5
+  };
 
   formProducto: FormularioProducto = this.formularioVacio();
 
-  // ========================================
-  // PERMISOS
-  // ========================================
+  constructor(private inventarioService: Inventario) {}
+
+  ngOnInit(): void {
+    this.cargarDatos();
+  }
+
+  cargarDatos(): void {
+    this.inventarioService.getProductos().subscribe({
+      next: (res) => {
+        if (res.status === 'success' && Array.isArray(res.data)) {
+          this.productos = res.data.map((p: any) => ({
+            id: p.id_producto,
+            codigo: p.codigo_identificacion,
+            nombre: p.nombre,
+            categoria: p.categoria || 'General',
+            unidad: p.unidad_medida || 'Unidad',
+            precio: Number(p.precio_venta),
+            stock: p.stock_actual,
+            stockMinimo: p.stock_minimo,
+            activo: p.estado_producto !== 'Inactivo',
+            id_categoria: p.id_categoria,
+            id_estado_producto: p.id_estado_producto
+          }));
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar productos:', err);
+        this.mostrarToast('error', 'No se pudieron cargar los productos del servidor.');
+      }
+    });
+
+    this.inventarioService.getMovimientos().subscribe({
+      next: (res) => {
+        if (res.status === 'success' && Array.isArray(res.data)) {
+          this.movimientos = res.data.map((m: any) => ({
+            id: m.id_movimiento_inventario,
+            productoId: m.id_producto,
+            codigo: '',
+            producto: m.producto,
+            tipo: m.tipo_movimiento,
+            cantidad: m.cantidad,
+            stockAnterior: 0,
+            stockNuevo: 0,
+            fecha: new Date(m.fecha),
+            responsable: m.usuario
+          }));
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar movimientos:', err);
+      }
+    });
+  }
 
   get esGerente(): boolean {
-    return this.rolActual === 'Gerente';
+    return this.rolActual === 'Administrador';
   }
 
   get puedeOperar(): boolean {
     return (
-      this.rolActual === 'Gerente' ||
+      this.rolActual === 'Administrador' ||
       this.rolActual === 'Auxiliar administrativo'
     );
   }
-
-  // ========================================
-  // ESTADÍSTICAS
-  // ========================================
 
   get totalUnidades(): number {
     return this.productos
@@ -191,20 +190,13 @@ export class InventarioComponent {
     return this.productos
       .filter((producto) => producto.activo)
       .reduce(
-        (total, producto) =>
-          total + producto.stock * producto.precio,
+        (total, producto) => total + (producto.stock * producto.precio),
         0
       );
   }
 
-  // ========================================
-  // BÚSQUEDA Y FILTRADO
-  // ========================================
-
   get productosFiltrados(): Producto[] {
-    const termino = this.busqueda
-      .trim()
-      .toLocaleLowerCase('es-CO');
+    const termino = this.busqueda.trim().toLocaleLowerCase('es-CO');
 
     if (!termino) {
       return this.productos;
@@ -221,28 +213,23 @@ export class InventarioComponent {
     );
   }
 
-  // ========================================
-  // FORMULARIO DE PRODUCTOS
-  // ========================================
-
   private formularioVacio(): FormularioProducto {
     return {
       codigo: '',
       nombre: '',
       categoria: '',
-      unidad: '',
+      unidad: 'Unidad',
       precio: 0,
       stock: 0,
       stockMinimo: 0,
+      id_categoria: 1,
+      id_estado_producto: 1
     };
   }
 
   abrirProducto(producto?: Producto): void {
     if (!this.puedeOperar) {
-      this.mostrarToast(
-        'error',
-        'No tienes permisos para gestionar productos.'
-      );
+      this.mostrarToast('error', 'No tienes permisos para gestionar productos.');
       return;
     }
 
@@ -258,6 +245,8 @@ export class InventarioComponent {
         precio: producto.precio,
         stock: producto.stock,
         stockMinimo: producto.stockMinimo,
+        id_categoria: producto.id_categoria ?? 1,
+        id_estado_producto: producto.id_estado_producto ?? 1
       };
     } else {
       this.formProducto = this.formularioVacio();
@@ -275,37 +264,21 @@ export class InventarioComponent {
 
   guardarProducto(): void {
     if (!this.puedeOperar) {
-      this.mostrarToast(
-        'error',
-        'No tienes permisos para esta acción.'
-      );
+      this.mostrarToast('error', 'No tienes permisos para esta acción.');
       return;
     }
 
     const codigo = this.formProducto.codigo.trim().toUpperCase();
     const nombre = this.formProducto.nombre.trim();
+    const unidad = this.formProducto.unidad.trim();
 
-    if (!codigo || !nombre) {
-      this.errorProducto =
-        'El código y el nombre son obligatorios.';
+    if (!codigo || !nombre || !unidad) {
+      this.errorProducto = 'El código, el nombre y la unidad de medida son obligatorios.';
       return;
     }
 
-    const codigoDuplicado = this.productos.some(
-      (producto) =>
-        producto.codigo.toUpperCase() === codigo &&
-        producto.id !== this.editandoProducto?.id
-    );
-
-    if (codigoDuplicado) {
-      this.errorProducto =
-        'Ya existe un producto con ese código.';
-      return;
-    }
-
-    if (!this.formProducto.categoria || !this.formProducto.unidad) {
-      this.errorProducto =
-        'Selecciona una categoría y una unidad.';
+    if (!this.formProducto.categoria) {
+      this.errorProducto = 'Selecciona una categoría.';
       return;
     }
 
@@ -314,141 +287,104 @@ export class InventarioComponent {
     const stockMinimo = Number(this.formProducto.stockMinimo);
 
     if (!Number.isFinite(precio) || precio < 0) {
-      this.errorProducto =
-        'El precio debe ser un número válido no negativo.';
+      this.errorProducto = 'El precio debe ser un número válido no negativo.';
       return;
     }
 
-    if (!Number.isInteger(stockMinimo) || stockMinimo < 0) {
-      this.errorProducto =
-        'El stock mínimo debe ser un entero no negativo.';
-      return;
-    }
+    const idCat = this.formParameterCategoriasMap[this.formProducto.categoria] || 1;
+
+    const payload = {
+      codigo_identificacion: codigo,
+      nombre: nombre,
+      unidad_medida: unidad,
+      precio_venta: precio,
+      stock_actual: stock,
+      stock_minimo: stockMinimo,
+      id_categoria: idCat,
+      id_estado_producto: 1
+    };
 
     if (!this.editandoProducto) {
-      if (!Number.isInteger(stock) || stock < 0) {
-        this.errorProducto =
-          'La cantidad inicial debe ser un entero no negativo.';
-        return;
-      }
+      this.inventarioService.crearProducto(payload as any).subscribe({
+        next: () => {
+          this.mostrarToast('ok', 'Producto registrado correctamente.');
+          this.cargarDatos();
+          this.cerrarProducto();
+        },
+        error: (err) => {
+          // IMPRIMIR DETALLE DEL ERROR EN CONSOLA
+          console.error('Error detallado desde Django:', err.error);
 
-      const nuevoProducto: Producto = {
-        id: this.siguienteId++,
-        codigo,
-        nombre,
-        categoria: this.formProducto.categoria,
-        unidad: this.formProducto.unidad,
-        precio,
-        stock,
-        stockMinimo,
-        activo: true,
-      };
-
-      this.productos = [...this.productos, nuevoProducto];
-
-      // Registrar el inventario inicial en el historial.
-      if (stock > 0) {
-        this.movimientos = [
-          {
-            id: this.siguienteMovimientoId++,
-            productoId: nuevoProducto.id,
-            codigo: nuevoProducto.codigo,
-            producto: nuevoProducto.nombre,
-            tipo: 'Entrada',
-            cantidad: stock,
-            stockAnterior: 0,
-            stockNuevo: stock,
-            fecha: new Date(),
-            responsable: this.usuarioActual,
-          },
-          ...this.movimientos,
-        ];
-      }
-
-      this.mostrarToast(
-        'ok',
-        'Producto registrado correctamente.'
-      );
-    } else {
-      const id = this.editandoProducto.id;
-
-      this.productos = this.productos.map((producto) =>
-        producto.id === id
-          ? {
-              ...producto,
-              codigo,
-              nombre,
-              categoria: this.formProducto.categoria,
-              unidad: this.formProducto.unidad,
-              precio,
-              stockMinimo,
-            }
-          : producto
-      );
-
-      this.mostrarToast(
-        'ok',
-        'Producto actualizado correctamente.'
-      );
+          this.errorProducto = typeof err.error === 'string'
+            ? err.error
+            : (err.error?.message || JSON.stringify(err.error));
+        }
+      });
     }
 
-    this.cerrarProducto();
-  }
 
-  // ========================================
-  // ACTIVAR Y DESACTIVAR PRODUCTOS
-  // ========================================
+    else {
+      const id = this.editandoProducto.id;
+      const updatePayload = {
+        ...payload,
+        stock_actual: this.editandoProducto.stock
+      };
+
+      this.inventarioService.actualizarProducto(id, updatePayload as any).subscribe({
+        next: () => {
+          this.mostrarToast('ok', 'Producto actualizado correctamente.');
+          this.cargarDatos();
+          this.cerrarProducto();
+        },
+        error: (err) => {
+          this.errorProducto = err.error?.message || 'Error al actualizar el producto.';
+        }
+      });
+    }
+  }
 
   alternarEstado(producto: Producto): void {
     if (!this.puedeOperar) {
-      this.mostrarToast(
-        'error',
-        'No tienes permisos para esta acción.'
-      );
+      this.mostrarToast('error', 'No tienes permisos para esta acción.');
       return;
     }
 
-    const nuevoEstado = !producto.activo;
+    const nuevoEstadoActivo = !producto.activo;
+    const nuevoEstadoId = nuevoEstadoActivo ? 1 : 2;
 
-    this.productos = this.productos.map((item) =>
-      item.id === producto.id
-        ? { ...item, activo: nuevoEstado }
-        : item
-    );
+    const payload = {
+      codigo_identificacion: producto.codigo,
+      nombre: producto.nombre,
+      unidad_medida: producto.unidad,
+      precio_venta: producto.precio,
+      stock_actual: producto.stock,
+      stock_minimo: producto.stockMinimo,
+      id_categoria: producto.id_categoria || 1,
+      id_estado_producto: nuevoEstadoId
+    };
 
-    if (!nuevoEstado && this.movProducto?.id === producto.id) {
-      this.cerrarMovimiento();
-    }
-
-    this.mostrarToast(
-      'ok',
-      nuevoEstado
-        ? 'Producto activado correctamente.'
-        : 'Producto desactivado correctamente.'
-    );
+    this.inventarioService.actualizarProducto(producto.id, payload as any).subscribe({
+      next: () => {
+        this.mostrarToast(
+          'ok',
+          nuevoEstadoActivo ? 'Producto activado correctamente.' : 'Producto desactivado correctamente.'
+        );
+        this.cargarDatos();
+      },
+      error: (err) => {
+        this.mostrarToast('error', err.error?.message || 'Error al cambiar estado.');
+      }
+    });
   }
 
-  // ========================================
-  // ENTRADAS Y SALIDAS
-  // ========================================
-
-  abrirMovimiento(
-    producto: Producto,
-    tipo: TipoMovimiento
-  ): void {
+  abrirMovimiento(producto: Producto, tipo: TipoMovimiento): void {
     if (!this.puedeOperar) {
-      this.mostrarToast(
-        'error',
-        'No tienes permisos para registrar movimientos.'
-      );
+      this.mostrarToast('error', 'No tienes permisos para registrar movimientos.');
       return;
     }
 
     if (!producto.activo) {
-      this.mostrarToast(
-        'alerta',
-        'No puedes mover existencias de un producto inactivo.'
-      );
+      this.mostrarToast('alerta', 'No puedes mover existencias de un producto inactivo.');
       return;
     }
 
@@ -468,93 +404,53 @@ export class InventarioComponent {
 
   registrarMovimiento(): void {
     if (!this.puedeOperar) {
-      this.mostrarToast(
-        'error',
-        'No tienes permisos para esta acción.'
-      );
+      this.mostrarToast('error', 'No tienes permisos para esta acción.');
       return;
     }
 
     if (!this.movProducto) {
-      this.errorMov =
-        'No se encontró el producto seleccionado.';
-      return;
-    }
-
-    const producto = this.productos.find(
-      (item) => item.id === this.movProducto?.id
-    );
-
-    if (!producto || !producto.activo) {
-      this.errorMov =
-        'El producto no existe o está inactivo.';
+      this.errorMov = 'No se encontró el producto seleccionado.';
       return;
     }
 
     const cantidad = Number(this.movCantidad);
 
     if (!Number.isInteger(cantidad) || cantidad <= 0) {
-      this.errorMov =
-        'La cantidad debe ser un entero mayor que cero.';
+      this.errorMov = 'La cantidad debe ser un entero mayor que cero.';
       return;
     }
 
-    if (this.movTipo === 'Salida' && cantidad > producto.stock) {
-      this.errorMov =
-        `No hay existencias suficientes. Stock actual: ${producto.stock}.`;
+    if (this.movTipo === 'Salida' && cantidad > this.movProducto.stock) {
+      this.errorMov = `No hay existencias suficientes. Stock actual: ${this.movProducto.stock}.`;
       return;
     }
 
-    const stockAnterior = producto.stock;
+    const idTipoMov = this.movTipo === 'Entrada' ? 1 : 2;
 
-    const stockNuevo =
-      this.movTipo === 'Entrada'
-        ? stockAnterior + cantidad
-        : stockAnterior - cantidad;
-
-    this.productos = this.productos.map((item) =>
-      item.id === producto.id
-        ? { ...item, stock: stockNuevo }
-        : item
-    );
-
-    const movimiento: MovimientoInventario = {
-      id: this.siguienteMovimientoId++,
-      productoId: producto.id,
-      codigo: producto.codigo,
-      producto: producto.nombre,
-      tipo: this.movTipo,
-      cantidad,
-      stockAnterior,
-      stockNuevo,
-      fecha: new Date(),
-      responsable: this.usuarioActual,
+    const payloadMovimiento = {
+      id_producto: this.movProducto.id,
+      id_usuario: 1,
+      id_tipo_movimiento: idTipoMov,
+      cantidad: cantidad,
+      costo_unitario: this.movProducto.precio
     };
 
-    this.movimientos = [movimiento, ...this.movimientos];
+    this.inventarioService.crearMovimiento(payloadMovimiento as any).subscribe({
+      next: () => {
+        this.mostrarToast('ok', `${this.movTipo} registrada correctamente`);
+        this.cargarDatos();
+        this.cerrarMovimiento();
+      },
+      error: (err) => {
 
-    const tipoRegistrado = this.movTipo;
-    this.cerrarMovimiento();
-
-    this.mostrarToast(
-      'ok',
-      `${tipoRegistrado} registrada correctamente. Nuevo stock: ${stockNuevo}.`
-    );
+        this.errorMov = err.error?.message || 'Error al registrar el movimiento';
+      }
+    });
   }
 
-  // ========================================
-  // PRESENTACIÓN Y FORMATO
-  // ========================================
-
   nivel(producto: Producto): NivelStock {
-    if (producto.stock === 0) {
-      return 'Agotado';
-    }
-
-    if (producto.stock <= producto.stockMinimo) {
-      return 'Stock bajo';
-    }
-
+    if (producto.stock === 0) return 'Agotado';
+    if (producto.stock <= producto.stockMinimo) return 'Stock bajo';
     return 'Disponible';
   }
 
@@ -564,14 +460,6 @@ export class InventarioComponent {
       currency: 'COP',
       maximumFractionDigits: 0,
     }).format(valor);
-  }
-
-  formatearFecha(fecha: Date): string {
-    return new Intl.DateTimeFormat('es-CO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    }).format(fecha);
   }
 
   formatearFechaHora(fecha: Date): string {
@@ -584,22 +472,13 @@ export class InventarioComponent {
     }).format(fecha);
   }
 
-  // Para la tabla de productos.
   trackById(_index: number, producto: Producto): number {
     return producto.id;
   }
 
-  // Para la tabla de movimientos.
-  trackByMovimientoId(
-    _index: number,
-    movimiento: MovimientoInventario
-  ): number {
+  trackByMovimientoId(_index: number, movimiento: MovimientoInventario): number {
     return movimiento.id;
   }
-
-  // ========================================
-  // NOTIFICACIONES
-  // ========================================
 
   private mostrarToast(tipo: TipoToast, texto: string): void {
     this.toast = { tipo, texto };
@@ -609,4 +488,3 @@ export class InventarioComponent {
     this.toast = null;
   }
 }
-

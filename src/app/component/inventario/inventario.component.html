@@ -1,4 +1,3 @@
-
 <app-sidbar></app-sidbar>
 <app-navbar></app-navbar>
 
@@ -397,12 +396,22 @@
             placeholder="Nombre del producto">
         </label>
 
-        <label class="campo completo">
+        <label class="campo">
           Categoría <b>*</b>
           <select class="input" [(ngModel)]="formProducto.categoria">
             <option value="">Selecciona una categoría</option>
             <option *ngFor="let categoria of categorias" [value]="categoria">
               {{ categoria }}
+            </option>
+          </select>
+        </label>
+
+        <label class="campo">
+          Unidad de medida <b>*</b>
+          <select class="input" [(ngModel)]="formProducto.unidad">
+            <option value="">Selecciona unidad</option>
+            <option *ngFor="let u of listaUnidadesMedida" [value]="u">
+              {{ u }}
             </option>
           </select>
         </label>
@@ -517,10 +526,9 @@
 
         <label class="campo">
           Tipo de movimiento
-          <select class="input" [(ngModel)]="movTipo">
-            <option *ngFor="let tipo of unidades" [value]="tipo">
-              {{ tipo }}
-            </option>
+          <select class="input" [(ngModel)]="movTipo" [disabled]="true">
+            <option value="Entrada">Entrada</option>
+            <option value="Salida">Salida</option>
           </select>
         </label>
 

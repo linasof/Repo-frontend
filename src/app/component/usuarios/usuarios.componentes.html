@@ -32,6 +32,67 @@
         <i class="pi pi-history"></i>
         Auditoría
       </button>
+      <button class="btn btn-primario"
+              type="button"
+              *ngIf="vistaActual === 'auditoria'"
+              (click)="abrirListado()">
+        <i class="pi pi-users"></i>
+        Volver a Usuarios
+      </button>
+
+      <!-- ========================================== -->
+      <!-- VISTA DE AUDITORÍA / BITÁCORA -->
+      <!-- ========================================== -->
+      <div *ngIf="vistaActual === 'auditoria'" class="contenedor-auditoria">
+        <div class="header-seccion mb-3">
+          <h2><i class="pi pi-history"></i> Historial de Bitácora / Auditoría</h2>
+          <p>Registro detallado de acciones y cambios realizados por los usuarios en el sistema.</p>
+        </div>
+
+        <!-- Mensaje o spinner de carga -->
+        <div *ngIf="cargandoAuditoria" class="cargando-container">
+          <p>Cargando el historial de auditoría...</p>
+        </div>
+
+        <!-- Tabla de Auditoría -->
+        <table *ngIf="!cargandoAuditoria" class="tabla-custom">
+          <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fecha y Hora</th>
+            <th>Usuario Responsable</th>
+            <th>Usuario Afectado</th>
+            <th>Acción</th>
+            <th>Detalle del Cambio</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let item of historialAuditoria">
+            <td>{{ item.id_registro_bitacora }}</td>
+            <td>{{ item.fecha }}</td>
+            <td><strong>{{ item.usuario_responsable }}</strong></td>
+            <td>{{ item.usuario_afectado }}</td>
+            <td>
+          <span class="badge" [ngClass]="{
+            'badge-verde': item.accion.includes('CREAR'),
+            'badge-ambar': item.accion.includes('ACTUALIZAR'),
+            'badge-rojo': item.accion.includes('ELIMINAR')
+          }">
+            {{ item.accion }}
+          </span>
+            </td>
+            <td>{{ item.cambio_realizado }}</td>
+          </tr>
+
+          <!-- Fila vacía si no hay registros -->
+          <tr *ngIf="historialAuditoria.length === 0">
+            <td colspan="6" class="text-center py-4">
+              No hay registros de auditoría almacenados en la bitácora.
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
 
       <button class="btn btn-primario"
               type="button"
@@ -378,121 +439,7 @@
     </div>
   </ng-container>
 
-  <!-- VISTA: AUDITORÍA -->
-  <ng-container *ngIf="vistaActual === 'auditoria'">
 
-    <section class="tarjeta historial-card">
-
-      <div class="historial-intro">
-        <div class="historial-icono">
-          <i class="pi pi-history"></i>
-        </div>
-
-        <div>
-          <h2>Historial de auditoría</h2>
-          <p>Registro local de las acciones realizadas en este módulo.</p>
-        </div>
-
-        <span class="historial-total">
-          {{ historialFiltrado.length }} registros
-        </span>
-      </div>
-
-      <div class="barra-controles">
-        <label class="buscador">
-          <i class="pi pi-search"></i>
-          <input
-            type="search"
-            placeholder="Buscar por usuario, acción o detalle..."
-            [(ngModel)]="busqueda"
-            aria-label="Buscar en auditoría">
-        </label>
-
-        <button class="btn btn-secundario"
-                type="button"
-                (click)="abrirListado()">
-          <i class="pi pi-arrow-left"></i>
-          Volver a usuarios
-        </button>
-      </div>
-
-      <div class="tabla-scroll">
-        <table class="tabla">
-          <thead>
-          <tr>
-            <th>Fecha y hora</th>
-            <th>Usuario responsable</th>
-            <th>Acción</th>
-            <th>Detalle</th>
-            <th>Tipo</th>
-          </tr>
-          </thead>
-
-          <tbody>
-          <tr *ngFor="let registro of historialFiltrado; trackBy: trackById">
-
-            <td class="fecha-auditoria">
-              {{ formatearFechaHora(registro.fecha) }}
-            </td>
-
-            <td>{{ registro.usuario }}</td>
-
-            <td>
-              <strong>{{ registro.accion }}</strong>
-            </td>
-
-            <td>
-              <div class="detalle-auditoria">
-                {{ registro.detalle }}
-              </div>
-            </td>
-
-            <td>
-                <span class="badge"
-                      [ngClass]="{
-                        'badge-verde': registro.tipo === 'ok',
-                        'badge-ambar': registro.tipo === 'alerta',
-                        'badge-rojo': registro.tipo === 'error',
-                        'badge-azul': registro.tipo === 'info'
-                      }">
-                  {{ registro.tipo === 'ok' ? 'Correcto' :
-                  registro.tipo === 'alerta' ? 'Advertencia' :
-                    registro.tipo === 'error' ? 'Eliminación' : 'Información' }}
-                </span>
-            </td>
-
-          </tr>
-
-          <tr *ngIf="historialFiltrado.length === 0">
-            <td colspan="5">
-              <div class="vacio">
-                <div class="vacio-icono">
-                  <i class="pi pi-history"></i>
-                </div>
-                <strong>No hay registros disponibles</strong>
-                <p>No se encontraron coincidencias con la búsqueda.</p>
-              </div>
-            </td>
-          </tr>
-
-          </tbody>
-        </table>
-      </div>
-
-      <footer class="pie-tabla">
-        <span>
-          Total de registros visibles:
-          <strong>{{ historialFiltrado.length }}</strong>
-        </span>
-
-        <span class="pie-seguridad">
-          <i class="pi pi-info-circle"></i>
-          Auditoría local de demostración
-        </span>
-      </footer>
-
-    </section>
-  </ng-container>
 
 </main>
 
@@ -598,6 +545,7 @@
                  maxlength="30"
                  placeholder="Ej. 1011111111">
         </label>
+
 
         <label class="campo">
           Correo electrónico <b>*</b>
