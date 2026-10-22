@@ -1,8 +1,12 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Usuario } from '../../model/usuario';
 import { UsuarioService } from '../../service/usuario.service';
-import { Auth } from '../../service/auth';
+import { Auth, ROL_ADMINISTRADOR, ROL_AUXILIAR } from '../../service/auth';
 import { AuditoriaService, RegistroBitacora } from '../../service/auditoria.service';
+import {
+  Errores, erroresDelServidor, limpiar, validarContrasenia, validarCorreo, validarDocumento,
+  validarNombrePersona, validarNombreUsuario
+} from '../../service/validaciones';
 
 @Component({
   selector: 'app-usuarios',
@@ -13,13 +17,10 @@ import { AuditoriaService, RegistroBitacora } from '../../service/auditoria.serv
 export class UsuariosComponentes implements OnInit {
 
   vistaActual: string = 'usuarios';
-  esGerente: boolean = true;
-  puedeGestionarUsuarios: boolean = true;
-  usuarioActualId: number = 1;
+  usuarioActualId: number = 0;
   usuarioSesion: Usuario | null = null;
 
   listaUsuarios: Usuario[] = [];
-  usuariosFiltrados: Usuario[] = [];
 
   totalUsuarios: number = 0;
   usuariosActivos: number = 0;
@@ -29,7 +30,7 @@ export class UsuariosComponentes implements OnInit {
   busqueda: string = '';
   filtroRol: string = '';
   filtroEstado: string = '';
-  // mismos nombres e ids que las tablas rol y estado_usuario de la bd
+  // mismos nombres e ids que las tablas rol, estado_usuario y tipo_documento de la bd
   roles: string[] = ['Administrador', 'Vendedor', 'Auxiliar administrativo'];
   estados: string[] = ['Contratado', 'Suspendido', 'En vacaciones', 'Retirado'];
   idsEstado: { [nombre: string]: number } = { 'Contratado': 1, 'Suspendido': 2, 'En vacaciones': 3, 'Retirado': 4 };
@@ -37,18 +38,23 @@ export class UsuariosComponentes implements OnInit {
   dlgUsuario: boolean = false;
   editandoUsuario: boolean = false;
   dlgEstado: boolean = false;
-  dlgEliminar: boolean = false;
+  guardando: boolean = false;
 
   formUsuario!: Usuario;
   usuarioEstado: Usuario | null = null;
   nuevoEstado: string = '';
   errorEstado: string = '';
-  usuarioEliminar: Usuario | null = null;
-  errorEliminar: string = '';
   errorUsuario: string = '';
+  erroresUsuario: Errores = {};
 
-  historialFiltrado: any[] = [];
+  // cambio de contraseña en mi perfil
+  formClave = { actual: '', nueva: '', confirmacion: '' };
+  erroresClave: Errores = {};
+  errorClave: string = '';
+  verClaves: boolean = false;
+
   toast: { tipo: string, texto: string } | null = null;
+  private temporizadorToast: any = null;
   historialAuditoria: RegistroBitacora[] = [];
   cargandoAuditoria: boolean = false;
 
@@ -59,123 +65,130 @@ export class UsuariosComponentes implements OnInit {
     private auditoriaService: AuditoriaService
   ) {}
 
+  // el auxiliar administrativo crea y modifica usuarios, el administrador (gerente) solo consulta
+  get puedeGestionarUsuarios(): boolean {
+    return this.auth.tieneRol(ROL_AUXILIAR);
+  }
+
+  get puedeVerAuditoria(): boolean {
+    return this.auth.tieneRol(ROL_ADMINISTRADOR, ROL_AUXILIAR);
+  }
+
+  get usuariosFiltrados(): Usuario[] {
+    const termino = this.busqueda.trim().toLocaleLowerCase('es-CO');
+    return this.listaUsuarios.filter(u => {
+      const texto = [u.primer_nombre, u.segundo_nombre, u.primer_apellido, u.segundo_apellido,
+        u.nombre_usuario, u.correo, u.numero_documento, u.nombre_rol]
+        .filter(Boolean).join(' ').toLocaleLowerCase('es-CO');
+      return (!termino || texto.includes(termino))
+        && (!this.filtroRol || u.nombre_rol === this.filtroRol)
+        && (!this.filtroEstado || u.nombre_estado_usuario === this.filtroEstado);
+    });
+  }
+
   ngOnInit(): void {
     // el usuario marcado como "Tú" es el que inició sesión
     const sesion = this.auth.obtenerSesion();
     if (sesion) {
       this.usuarioActualId = sesion.id_usuario;
     }
+    this.formUsuario = this.inicializarUsuarioVacio();
     this.cargarUsuarios();
   }
-
 
   cargarUsuarios(): void {
     this.usuarioService.getUsuarios().subscribe({
       next: (respuesta: any) => {
-        console.log("Lo que envió Django:", respuesta);
-
-        let datos: Usuario[] = [];
-
-        if (Array.isArray(respuesta)) {
-          datos = respuesta;
-        } else if (respuesta && respuesta.usuarios) {
-          datos = respuesta.usuarios;
-        } else if (respuesta && respuesta.data) {
-          datos = respuesta.data;
-        } else if (respuesta) {
-          const posibleArray = Object.values(respuesta).find(val => Array.isArray(val));
-          datos = (posibleArray as Usuario[]) || [];
-        }
-
+        const datos: any[] = Array.isArray(respuesta?.data) ? respuesta.data : [];
         this.listaUsuarios = datos.map((u: any) => ({
           ...u,
-          nombre_rol: u.nombre_rol || u.rol || 'Sin Rol',
-          nombre_estado_usuario: u.nombre_estado_usuario || u.estado || u.nombre_estado || 'Contratado',
-          nombre_tipo_documento: u.nombre_tipo_documento || u.tipo_documento || 'CC'
+          nombre_rol: u.nombre_rol || u.rol || 'Sin rol',
+          nombre_estado_usuario: u.nombre_estado_usuario || u.estado || 'Contratado',
+          nombre_tipo_documento: u.nombre_tipo_documento || u.tipo_documento || ''
         }));
-
-
-        this.usuariosFiltrados = [...this.listaUsuarios];
         this.calcularEstadisticas();
         this.usuarioSesion = this.listaUsuarios.find(u => u.id_usuario === this.usuarioActualId) || null;
         this.cdr.markForCheck(); // para que la tabla se pinte apenas llegan los datos
       },
       error: (err) => {
-        this.mostrarToast('error', 'Error al conectar con el backend.');
-        this.cdr.markForCheck();
-        console.error(err);
+        const { mensaje } = erroresDelServidor(err, 'No se pudieron cargar los usuarios.');
+        this.mostrarToast('error', mensaje || 'No se pudieron cargar los usuarios.');
       }
     });
   }
 
-  guardarUsuario(): void {
-    this.errorUsuario = '';
-    console.log("1. Datos antes de procesar:", this.formUsuario);
-
-
-    if (!this.formUsuario.nombre_usuario || !this.formUsuario.primer_nombre ||
-      !this.formUsuario.primer_apellido || !this.formUsuario.correo ||
-      !this.formUsuario.numero_documento) {
-      this.errorUsuario = 'Faltan campos obligatorios (*).';
-      return;
+  // revisa el formulario antes de mandarlo, con las mismas reglas del back
+  private validarFormulario(): Errores {
+    const f = this.formUsuario;
+    const errores: Errores = {};
+    validarNombreUsuario(errores, 'nombre_usuario', f.nombre_usuario);
+    validarNombrePersona(errores, 'primer_nombre', f.primer_nombre, 'El primer nombre');
+    validarNombrePersona(errores, 'segundo_nombre', f.segundo_nombre, 'El segundo nombre', false);
+    validarNombrePersona(errores, 'primer_apellido', f.primer_apellido, 'El primer apellido');
+    validarNombrePersona(errores, 'segundo_apellido', f.segundo_apellido, 'El segundo apellido', false);
+    validarCorreo(errores, 'correo', f.correo);
+    if (!this.editandoUsuario) {
+      validarDocumento(errores, 'numero_documento', f.numero_documento, Number(f.id_tipo_documento));
     }
-
-
-    if (!this.editandoUsuario && !this.formUsuario.contrasenia) {
-      this.errorUsuario = 'La contraseña es obligatoria para usuarios nuevos.';
-      return;
+    if (!f.id_rol) errores['id_rol'] = 'Selecciona un rol';
+    if (!errores['segundo_nombre'] && f.segundo_nombre && limpiar(f.segundo_nombre).toLowerCase() === limpiar(f.primer_nombre).toLowerCase()) {
+      errores['segundo_nombre'] = 'El segundo nombre no puede ser igual al primero';
     }
-
-
-    this.formUsuario.id_rol = Number(this.formUsuario.id_rol);
-    this.formUsuario.id_tipo_documento = Number(this.formUsuario.id_tipo_documento);
-    this.formUsuario.id_estado_usuario = Number(this.formUsuario.id_estado_usuario);
-
-    console.log("2. Datos empaquetados para enviar a Django:", this.formUsuario);
-
-    if (this.editandoUsuario && this.formUsuario.id_usuario) {
-      this.usuarioService.actualizarUsuario(this.formUsuario.id_usuario, this.formUsuario).subscribe({
-        next: () => {
-          this.mostrarToast('ok', 'Usuario actualizado correctamente.');
-          this.cerrarUsuario();
-          this.cargarUsuarios();
-        },
-        error: (err) => {
-          console.error(err);
-          this.errorUsuario = 'Error al actualizar. Revisa la consola (F12).';
-          this.cdr.markForCheck();
-        }
-      });
-    } else {
-      this.usuarioService.crearUsuario(this.formUsuario).subscribe({
-        next: () => {
-          this.mostrarToast('ok', 'Usuario creado exitosamente.');
-          this.cerrarUsuario();
-          this.cargarUsuarios();
-        },
-        error: (err) => {
-          console.error(err);
-          this.errorUsuario = 'Error al crear. Verifica que el usuario o documento no existan ya.';
-          this.cdr.markForCheck();
-        }
-      });
-    }
+    // no buscar duplicados en la lista local para no depender de ella, eso lo responde el back
+    return errores;
   }
 
-  confirmarEliminar(): void {
-    if (this.usuarioEliminar && this.usuarioEliminar.id_usuario) {
-      this.usuarioService.eliminarUsuario(this.usuarioEliminar.id_usuario).subscribe({
-        next: () => {
-          this.mostrarToast('ok', 'Usuario eliminado.');
-          this.cerrarEliminar();
-          this.cargarUsuarios();
-        },
-        error: () => this.errorEliminar = 'No se pudo eliminar el usuario.'
-      });
+  guardarUsuario(): void {
+    if (this.guardando) return;
+    this.errorUsuario = '';
+    this.erroresUsuario = this.validarFormulario();
+    if (Object.keys(this.erroresUsuario).length) {
+      this.errorUsuario = 'Revisa los campos marcados en rojo.';
+      return;
     }
+
+    const f = this.formUsuario;
+    const datos: any = {
+      nombre_usuario: limpiar(f.nombre_usuario),
+      primer_nombre: limpiar(f.primer_nombre),
+      segundo_nombre: limpiar(f.segundo_nombre) || null,
+      primer_apellido: limpiar(f.primer_apellido),
+      segundo_apellido: limpiar(f.segundo_apellido) || null,
+      correo: limpiar(f.correo).toLowerCase(),
+      numero_documento: limpiar(f.numero_documento),
+      id_rol: Number(f.id_rol),
+      id_tipo_documento: Number(f.id_tipo_documento),
+    };
+
+    this.guardando = true;
+    const peticion = this.editandoUsuario && f.id_usuario
+      ? this.usuarioService.actualizarUsuario(f.id_usuario, { ...datos, id_estado_usuario: Number(f.id_estado_usuario) })
+      : this.usuarioService.crearUsuario(datos);
+
+    peticion.subscribe({
+      next: (respuesta: any) => {
+        this.guardando = false;
+        this.mostrarToast('ok', this.editandoUsuario
+          ? 'Usuario actualizado correctamente.'
+          : (respuesta?.message || 'Usuario creado. La contraseña se envió a su correo.'));
+        this.cerrarUsuario();
+        this.cargarUsuarios();
+      },
+      error: (err) => {
+        this.guardando = false;
+        const { errores, mensaje } = erroresDelServidor(err, 'No se pudo guardar el usuario.');
+        this.erroresUsuario = errores;
+        this.errorUsuario = mensaje || 'Revisa los campos marcados en rojo.';
+        this.cdr.markForCheck();
+      }
+    });
   }
 
   abrirUsuario(usuario?: Usuario): void {
+    if (!this.puedeGestionarUsuarios) {
+      this.mostrarToast('error', 'Tu rol no puede crear ni editar usuarios.');
+      return;
+    }
     if (usuario) {
       this.editandoUsuario = true;
       this.formUsuario = { ...usuario };
@@ -184,17 +197,25 @@ export class UsuariosComponentes implements OnInit {
       this.formUsuario = this.inicializarUsuarioVacio();
     }
     this.errorUsuario = '';
+    this.erroresUsuario = {};
     this.dlgUsuario = true;
   }
 
-  cerrarUsuario(): void { this.dlgUsuario = false; }
-  abrirEliminar(usuario: Usuario): void { this.usuarioEliminar = usuario; this.errorEliminar = ''; this.dlgEliminar = true; }
-  cerrarEliminar(): void { this.dlgEliminar = false; this.usuarioEliminar = null; }
-  abrirCambioEstado(usuario: Usuario): void { this.usuarioEstado = usuario; this.nuevoEstado = usuario.nombre_estado_usuario || ''; this.errorEstado = ''; this.dlgEstado = true; }
+  cerrarUsuario(): void { this.dlgUsuario = false; this.erroresUsuario = {}; this.errorUsuario = ''; }
+
+  abrirCambioEstado(usuario: Usuario): void {
+    if (!this.puedeGestionarUsuarios || usuario.id_usuario === this.usuarioActualId) return;
+    this.usuarioEstado = usuario;
+    this.nuevoEstado = usuario.nombre_estado_usuario || '';
+    this.errorEstado = '';
+    this.dlgEstado = true;
+  }
+
   cerrarCambioEstado(): void { this.dlgEstado = false; this.usuarioEstado = null; }
+
   guardarEstado(): void {
     this.errorEstado = '';
-    if (!this.usuarioEstado || !this.usuarioEstado.id_usuario) {
+    if (!this.usuarioEstado || !this.usuarioEstado.id_usuario || this.guardando) {
       return;
     }
     const idEstado = this.idsEstado[this.nuevoEstado];
@@ -202,23 +223,73 @@ export class UsuariosComponentes implements OnInit {
       this.errorEstado = 'Selecciona un estado.';
       return;
     }
+    if (this.nuevoEstado === this.usuarioEstado.nombre_estado_usuario) {
+      this.errorEstado = 'El usuario ya está en ese estado.';
+      return;
+    }
     // se manda el usuario completo con el estado nuevo al actualizar del back
-    const datos: Usuario = { ...this.usuarioEstado, id_estado_usuario: idEstado };
-    this.usuarioService.actualizarUsuario(this.usuarioEstado.id_usuario, datos).subscribe({
+    const u = this.usuarioEstado;
+    const datos: any = {
+      nombre_usuario: u.nombre_usuario, primer_nombre: u.primer_nombre, segundo_nombre: u.segundo_nombre,
+      primer_apellido: u.primer_apellido, segundo_apellido: u.segundo_apellido, correo: u.correo,
+      numero_documento: u.numero_documento, id_rol: u.id_rol, id_tipo_documento: u.id_tipo_documento,
+      id_estado_usuario: idEstado
+    };
+    this.guardando = true;
+    this.usuarioService.actualizarUsuario(u.id_usuario!, datos).subscribe({
       next: () => {
+        this.guardando = false;
         this.mostrarToast('ok', 'Estado actualizado.');
         this.cerrarCambioEstado();
         this.cargarUsuarios();
       },
       error: (err) => {
-        this.errorEstado = err?.error?.message || 'No se pudo cambiar el estado.';
+        this.guardando = false;
+        const { errores, mensaje } = erroresDelServidor(err, 'No se pudo cambiar el estado.');
+        this.errorEstado = mensaje || Object.values(errores).join(' ');
         this.cdr.markForCheck();
       }
     });
   }
 
-  abrirPerfil(): void { this.vistaActual = 'perfil'; }
+  abrirPerfil(): void {
+    this.vistaActual = 'perfil';
+    this.formClave = { actual: '', nueva: '', confirmacion: '' };
+    this.erroresClave = {};
+    this.errorClave = '';
+  }
 
+  cambiarContrasenia(): void {
+    if (this.guardando) return;
+    const errores: Errores = {};
+    if (!this.formClave.actual) errores['contrasenia_actual'] = 'Escribe tu contraseña actual';
+    validarContrasenia(errores, 'contrasenia_nueva', this.formClave.nueva, 'La nueva contraseña');
+    if (!errores['contrasenia_nueva'] && this.formClave.nueva === this.formClave.actual) {
+      errores['contrasenia_nueva'] = 'La nueva contraseña debe ser diferente a la actual';
+    }
+    if (this.formClave.nueva && this.formClave.confirmacion !== this.formClave.nueva) {
+      errores['confirmacion'] = 'Las contraseñas no coinciden';
+    }
+    this.erroresClave = errores;
+    this.errorClave = '';
+    if (Object.keys(errores).length) return;
+
+    this.guardando = true;
+    this.auth.cambiarContrasenia(this.formClave.actual, this.formClave.nueva, this.formClave.confirmacion).subscribe({
+      next: () => {
+        this.guardando = false;
+        this.formClave = { actual: '', nueva: '', confirmacion: '' };
+        this.mostrarToast('ok', 'Contraseña actualizada.');
+      },
+      error: (err) => {
+        this.guardando = false;
+        const { errores: delServidor, mensaje } = erroresDelServidor(err, 'No se pudo cambiar la contraseña.');
+        this.erroresClave = delServidor;
+        this.errorClave = mensaje;
+        this.cdr.markForCheck();
+      }
+    });
+  }
 
   /* Metodo para abrir la auditoria de usuarios */
   abrirAuditoria(): void {
@@ -237,9 +308,9 @@ export class UsuariosComponentes implements OnInit {
         this.cdr.markForCheck();
       },
       error: (err) => {
-        console.error('Error al cargar la auditoría:', err);
         this.cargandoAuditoria = false;
-        this.cdr.markForCheck();
+        const { mensaje } = erroresDelServidor(err, 'No se pudo cargar la auditoría.');
+        this.mostrarToast('error', mensaje || 'No se pudo cargar la auditoría.');
       }
     });
   }
@@ -250,8 +321,8 @@ export class UsuariosComponentes implements OnInit {
     return {
       nombre_usuario: '', primer_nombre: '', segundo_nombre: '',
       primer_apellido: '', segundo_apellido: '',
-      correo: '', numero_documento: '', contrasenia: '',
-      id_rol: 1, id_tipo_documento: 1, id_estado_usuario: 1
+      correo: '', numero_documento: '',
+      id_rol: 2, id_tipo_documento: 1, id_estado_usuario: 1
     };
   }
 
@@ -263,11 +334,17 @@ export class UsuariosComponentes implements OnInit {
     this.usuariosSuspendidos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Suspendido').length;
   }
 
-  limpiarFiltros(): void { this.busqueda = ''; this.filtroRol = ''; this.filtroEstado = ''; this.usuariosFiltrados = this.listaUsuarios; }
-  mostrarToast(tipo: string, texto: string): void { this.toast = { tipo, texto }; this.cdr.markForCheck(); setTimeout(() => { this.cerrarToast(); this.cdr.markForCheck(); }, 4000); }
+  limpiarFiltros(): void { this.busqueda = ''; this.filtroRol = ''; this.filtroEstado = ''; }
+
+  mostrarToast(tipo: string, texto: string): void {
+    this.toast = { tipo, texto };
+    clearTimeout(this.temporizadorToast);
+    this.temporizadorToast = setTimeout(() => { this.cerrarToast(); this.cdr.markForCheck(); }, 4500);
+    this.cdr.markForCheck();
+  }
+
   cerrarToast(): void { this.toast = null; }
   trackById(index: number, item: Usuario): any { return item.id_usuario; }
-  formatearFechaHora(fecha: string): string { return new Date(fecha).toLocaleString(); }
   claseRol(rol?: string): string { if (rol === 'Administrador') return 'badge-info'; if (rol === 'Vendedor') return 'badge-purpura'; return 'badge-gris'; }
   claseEstado(estado?: string): string { if (estado === 'Contratado') return 'badge-verde'; if (estado === 'Suspendido' || estado === 'Retirado') return 'badge-rojo'; return 'badge-ambar'; }
   claseAvatar(usuario: Usuario): string { return 'avatar-azul'; }

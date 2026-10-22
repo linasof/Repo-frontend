@@ -9,7 +9,8 @@ import { InventarioComponent } from './component/inventario/inventario.component
 import { NavbarComponent } from './component/navbar/navbar.component';
 import { SidbarComponent } from './component/sidbar/sidbar.component';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http'; // <-- Importación para las peticiones HTTP
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { TokenInterceptor } from './service/token.interceptor';
 
 @NgModule({
   declarations: [
@@ -28,7 +29,9 @@ import { HttpClientModule } from '@angular/common/http'; // <-- Importación par
     HttpClientModule // <-- Agregado a los imports
   ],
   providers: [
-    provideBrowserGlobalErrorListeners()
+    provideBrowserGlobalErrorListeners(),
+    // le pone el token de la sesion a todas las peticiones al back
+    { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]
 })

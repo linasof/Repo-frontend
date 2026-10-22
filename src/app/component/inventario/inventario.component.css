@@ -1196,3 +1196,57 @@
     transition-duration: .01ms !important;
   }
 }
+
+/* eliminar producto */
+.accion-eliminar {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #e11d48;
+}
+
+.accion-eliminar:hover:not(:disabled) {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #be123c;
+}
+
+.btn-peligro {
+  background: #e11d48;
+  color: #fff;
+  box-shadow: 0 4px 10px #e11d4825;
+}
+
+.btn-peligro:hover:not(:disabled) {
+  background: #be123c;
+}
+
+.fila-inactiva td {
+  opacity: 0.6;
+}
+
+/* errores por campo */
+.input-error {
+  border-color: #e11d48 !important;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12);
+}
+
+.error-campo {
+  display: block;
+  margin-top: 4px;
+  color: #e11d48;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ayuda-campo {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.input:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}

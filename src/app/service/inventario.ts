@@ -18,11 +18,11 @@ export class Inventario {
     return this.http.get<any>(`${this.baseUrl}/productos/`);
   }
 
-  crearProducto(producto: Producto): Observable<any> {
+  crearProducto(producto: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/productos/crear/`, producto);
   }
 
-  actualizarProducto(id: number, producto: Producto): Observable<any> {
+  actualizarProducto(id: number, producto: any): Observable<any> {
     return this.http.put(`${this.baseUrl}/productos/actualizar/${id}/`, producto);
   }
 
@@ -31,11 +31,15 @@ export class Inventario {
   }
 
 
+  getCategorias(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/categorias/`);
+  }
+
   getMovimientos(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/movimientos/`);
   }
 
-  crearMovimiento(movimiento: MovimientoInventario): Observable<any> {
+  crearMovimiento(movimiento: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/movimientos/crear/`, movimiento);
   }
 }

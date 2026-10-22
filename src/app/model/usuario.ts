@@ -18,6 +18,5 @@ export interface Usuario {
   nombre_tipo_documento?: string;
   nombre_estado_usuario?: string;
   
-  // Solo se usa al crear
-  contrasenia?: string;
+  // al crear no se manda contraseña: el back genera una y la envía al correo
 }

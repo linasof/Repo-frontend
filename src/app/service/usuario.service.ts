@@ -12,8 +12,8 @@ export class UsuarioService {
 
   constructor(private http: HttpClient) { }
 
-  getUsuarios(): Observable<Usuario[]> {
-    return this.http.get<Usuario[]>(`${this.baseUrl}/`);
+  getUsuarios(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/`);
   }
 
   crearUsuario(usuario: Usuario): Observable<any> {
@@ -22,10 +22,6 @@ export class UsuarioService {
 
   actualizarUsuario(id: number, usuario: Usuario): Observable<any> {
     return this.http.put(`${this.baseUrl}/actualizar/${id}/`, usuario);
-  }
-
-  eliminarUsuario(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/eliminar/${id}/`);
   }
 }
 
