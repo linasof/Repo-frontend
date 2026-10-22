@@ -15,6 +15,11 @@ export interface SesionUsuario {
   estado: string;
 }
 
+// mismos nombres de la tabla rol
+export const ROL_ADMINISTRADOR = 'Administrador';
+export const ROL_VENDEDOR = 'Vendedor';
+export const ROL_AUXILIAR = 'Auxiliar administrativo';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -32,20 +37,37 @@ export class Auth {
     );
   }
 
+  cambiarContrasenia(contrasenia_actual: string, contrasenia_nueva: string, confirmacion: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/cambiar-contrasenia/`, { contrasenia_actual, contrasenia_nueva, confirmacion });
+  }
+
   obtenerSesion(): SesionUsuario | null {
     const guardada = localStorage.getItem(this.claveSesion);
     if (!guardada) {
       return null;
     }
     try {
-      return JSON.parse(guardada) as SesionUsuario;
+      const sesion = JSON.parse(guardada) as SesionUsuario;
+      return sesion && sesion.token ? sesion : null;
     } catch {
       return null;
     }
   }
 
+  get token(): string | null {
+    return this.obtenerSesion()?.token ?? null;
+  }
+
+  get rol(): string {
+    return this.obtenerSesion()?.rol ?? '';
+  }
+
   estaLogueado(): boolean {
     return this.obtenerSesion() !== null;
+  }
+
+  tieneRol(...roles: string[]): boolean {
+    return roles.includes(this.rol);
   }
 
   cerrarSesion(): void {

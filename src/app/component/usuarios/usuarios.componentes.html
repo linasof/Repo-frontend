@@ -27,7 +27,7 @@
 
       <button class="btn btn-secundario"
               type="button"
-              *ngIf="esGerente"
+              *ngIf="puedeVerAuditoria && vistaActual !== 'auditoria'"
               (click)="abrirAuditoria()">
         <i class="pi pi-history"></i>
         Auditoría
@@ -40,69 +40,72 @@
         Volver a Usuarios
       </button>
 
-      <!-- ========================================== -->
-      <!-- VISTA DE AUDITORÍA / BITÁCORA -->
-      <!-- ========================================== -->
-      <div *ngIf="vistaActual === 'auditoria'" class="contenedor-auditoria">
-        <div class="header-seccion mb-3">
-          <h2><i class="pi pi-history"></i> Historial de Bitácora / Auditoría</h2>
-          <p>Registro detallado de acciones y cambios realizados por los usuarios en el sistema.</p>
-        </div>
-
-        <!-- Mensaje o spinner de carga -->
-        <div *ngIf="cargandoAuditoria" class="cargando-container">
-          <p>Cargando el historial de auditoría...</p>
-        </div>
-
-        <!-- Tabla de Auditoría -->
-        <table *ngIf="!cargandoAuditoria" class="tabla-custom">
-          <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha y Hora</th>
-            <th>Usuario Responsable</th>
-            <th>Usuario Afectado</th>
-            <th>Acción</th>
-            <th>Detalle del Cambio</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr *ngFor="let item of historialAuditoria">
-            <td>{{ item.id_registro_bitacora }}</td>
-            <td>{{ item.fecha }}</td>
-            <td><strong>{{ item.usuario_responsable }}</strong></td>
-            <td>{{ item.usuario_afectado }}</td>
-            <td>
-          <span class="badge" [ngClass]="{
-            'badge-verde': item.accion.includes('CREAR'),
-            'badge-ambar': item.accion.includes('ACTUALIZAR'),
-            'badge-rojo': item.accion.includes('ELIMINAR')
-          }">
-            {{ item.accion }}
-          </span>
-            </td>
-            <td>{{ item.cambio_realizado }}</td>
-          </tr>
-
-          <!-- Fila vacía si no hay registros -->
-          <tr *ngIf="historialAuditoria.length === 0">
-            <td colspan="6" class="text-center py-4">
-              No hay registros de auditoría almacenados en la bitácora.
-            </td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-
       <button class="btn btn-primario"
               type="button"
-              *ngIf="puedeGestionarUsuarios"
+              *ngIf="puedeGestionarUsuarios && vistaActual === 'usuarios'"
               (click)="abrirUsuario()">
         <i class="pi pi-plus"></i>
         Nuevo usuario
       </button>
     </div>
   </header>
+
+  <!-- ========================================== -->
+  <!-- VISTA DE AUDITORÍA / BITÁCORA -->
+  <!-- ========================================== -->
+  <div *ngIf="vistaActual === 'auditoria'" class="tarjeta contenedor-auditoria">
+    <div class="header-seccion mb-3">
+      <h2><i class="pi pi-history"></i> Historial de Bitácora / Auditoría</h2>
+      <p>Registro detallado de acciones y cambios realizados por los usuarios en el sistema.</p>
+    </div>
+
+    <!-- Mensaje o spinner de carga -->
+    <div *ngIf="cargandoAuditoria" class="cargando-container">
+      <p>Cargando el historial de auditoría...</p>
+    </div>
+
+    <!-- Tabla de Auditoría -->
+    <div class="tabla-scroll" *ngIf="!cargandoAuditoria">
+    <table class="tabla">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Fecha y Hora</th>
+        <th>Usuario Responsable</th>
+        <th>Usuario Afectado</th>
+        <th>Acción</th>
+        <th>Detalle del Cambio</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr *ngFor="let item of historialAuditoria">
+        <td>{{ item.id_registro_bitacora }}</td>
+        <td>{{ item.fecha }}</td>
+        <td><strong>{{ item.usuario_responsable }}</strong></td>
+        <td>{{ item.usuario_afectado }}</td>
+        <td>
+      <span class="badge" [ngClass]="{
+        'badge-verde': item.accion.includes('CREAR'),
+        'badge-ambar': item.accion.includes('ACTUALIZAR'),
+        'badge-rojo': item.accion.includes('ELIMINAR')
+      }">
+        {{ item.accion }}
+      </span>
+        </td>
+        <td>{{ item.cambio_realizado }}</td>
+      </tr>
+
+      <!-- Fila vacía si no hay registros -->
+      <tr *ngIf="historialAuditoria.length === 0">
+        <td colspan="6" class="text-center py-4">
+          No hay registros de auditoría almacenados en la bitácora.
+        </td>
+      </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
 
   <!-- VISTA: LISTADO DE USUARIOS -->
   <ng-container *ngIf="vistaActual === 'usuarios'">
@@ -293,17 +296,6 @@
                   <i class="pi pi-pencil"></i>
                 </button>
 
-                <button
-                  class="btn-accion accion-eliminar"
-                  type="button"
-                  title="Eliminar usuario"
-                  aria-label="Eliminar usuario"
-                  *ngIf="puedeGestionarUsuarios"
-                  [disabled]="usuario.id_usuario === usuarioActualId"
-                  (click)="abrirEliminar(usuario)">
-                  <i class="pi pi-trash"></i>
-                </button>
-
                 <span class="rol-texto"
                       *ngIf="!puedeGestionarUsuarios">
                     Solo lectura
@@ -400,7 +392,7 @@
 
             <div>
               <span>Permisos de gestión</span>
-              <strong>{{ esGerente ? 'Administrador de usuarios' : 'Acceso limitado' }}</strong>
+              <strong>{{ puedeGestionarUsuarios ? 'Crea y modifica usuarios' : 'Solo consulta' }}</strong>
             </div>
 
           </div>
@@ -414,11 +406,55 @@
 
           <p class="nota-perfil">
             <i class="pi pi-info-circle"></i>
-            La información presentada corresponde al perfil de demostración
-            de la sesión actual.
+            Información del usuario que inició sesión.
           </p>
 
         </div>
+      </section>
+
+      <section class="tarjeta tarjeta-clave">
+        <h2 class="titulo-clave"><i class="pi pi-lock"></i> Cambiar contraseña</h2>
+        <p class="subtitulo">Mínimo 8 caracteres, con una mayúscula, una minúscula y un número.</p>
+
+        <div class="form-grid una-columna">
+          <label class="campo">
+            Contraseña actual <b>*</b>
+            <input class="input" [type]="verClaves ? 'text' : 'password'" autocomplete="current-password"
+                   [class.input-error]="erroresClave['contrasenia_actual']"
+                   [(ngModel)]="formClave.actual" maxlength="64">
+            <small class="error-campo" *ngIf="erroresClave['contrasenia_actual']">{{ erroresClave['contrasenia_actual'] }}</small>
+          </label>
+
+          <label class="campo">
+            Nueva contraseña <b>*</b>
+            <input class="input" [type]="verClaves ? 'text' : 'password'" autocomplete="new-password"
+                   [class.input-error]="erroresClave['contrasenia_nueva']"
+                   [(ngModel)]="formClave.nueva" maxlength="64">
+            <small class="error-campo" *ngIf="erroresClave['contrasenia_nueva']">{{ erroresClave['contrasenia_nueva'] }}</small>
+          </label>
+
+          <label class="campo">
+            Confirmar nueva contraseña <b>*</b>
+            <input class="input" [type]="verClaves ? 'text' : 'password'" autocomplete="new-password"
+                   [class.input-error]="erroresClave['confirmacion']"
+                   [(ngModel)]="formClave.confirmacion" maxlength="64">
+            <small class="error-campo" *ngIf="erroresClave['confirmacion']">{{ erroresClave['confirmacion'] }}</small>
+          </label>
+
+          <label class="ver-claves">
+            <input type="checkbox" [(ngModel)]="verClaves"> Mostrar contraseñas
+          </label>
+        </div>
+
+        <div class="error" *ngIf="errorClave">
+          <i class="pi pi-exclamation-circle"></i>
+          {{ errorClave }}
+        </div>
+
+        <button class="btn btn-primario" type="button" [disabled]="guardando" (click)="cambiarContrasenia()">
+          <i class="pi pi-check"></i>
+          Guardar contraseña
+        </button>
       </section>
 
       <section class="tarjeta" *ngIf="!usuarioSesion">
@@ -487,111 +523,119 @@
           Nombre de usuario (Login) <b>*</b>
           <input class="input"
                  type="text"
+                 [class.input-error]="erroresUsuario['nombre_usuario']"
                  [(ngModel)]="formUsuario.nombre_usuario"
                  maxlength="50"
+                 autocomplete="off"
                  placeholder="Ej. jperez">
+          <small class="error-campo" *ngIf="erroresUsuario['nombre_usuario']">{{ erroresUsuario['nombre_usuario'] }}</small>
         </label>
 
         <label class="campo">
           Primer Nombre <b>*</b>
           <input class="input"
                  type="text"
+                 [class.input-error]="erroresUsuario['primer_nombre']"
                  [(ngModel)]="formUsuario.primer_nombre"
                  maxlength="50"
                  placeholder="Ej. Juan">
+          <small class="error-campo" *ngIf="erroresUsuario['primer_nombre']">{{ erroresUsuario['primer_nombre'] }}</small>
         </label>
 
         <label class="campo">
           Segundo Nombre
           <input class="input"
                  type="text"
+                 [class.input-error]="erroresUsuario['segundo_nombre']"
                  [(ngModel)]="formUsuario.segundo_nombre"
                  maxlength="50"
                  placeholder="Opcional">
+          <small class="error-campo" *ngIf="erroresUsuario['segundo_nombre']">{{ erroresUsuario['segundo_nombre'] }}</small>
         </label>
 
         <label class="campo">
           Primer Apellido <b>*</b>
           <input class="input"
                  type="text"
+                 [class.input-error]="erroresUsuario['primer_apellido']"
                  [(ngModel)]="formUsuario.primer_apellido"
                  maxlength="50"
                  placeholder="Ej. Pérez">
+          <small class="error-campo" *ngIf="erroresUsuario['primer_apellido']">{{ erroresUsuario['primer_apellido'] }}</small>
         </label>
 
         <label class="campo">
           Segundo Apellido
           <input class="input"
                  type="text"
+                 [class.input-error]="erroresUsuario['segundo_apellido']"
                  [(ngModel)]="formUsuario.segundo_apellido"
                  maxlength="50"
                  placeholder="Opcional">
+          <small class="error-campo" *ngIf="erroresUsuario['segundo_apellido']">{{ erroresUsuario['segundo_apellido'] }}</small>
         </label>
 
         <label class="campo">
           Tipo Documento <b>*</b>
           <select class="input"
+                  [class.input-error]="erroresUsuario['id_tipo_documento']"
+                  [disabled]="editandoUsuario"
                   [(ngModel)]="formUsuario.id_tipo_documento">
-            <option value="1">Cédula de Ciudadanía</option>
-            <option value="2">Cédula de extranjería</option>
+            <option [ngValue]="1">Cédula de Ciudadanía</option>
+            <option [ngValue]="2">Cédula de extranjería</option>
           </select>
+          <small class="error-campo" *ngIf="erroresUsuario['id_tipo_documento']">{{ erroresUsuario['id_tipo_documento'] }}</small>
         </label>
 
         <label class="campo">
           Número de Documento <b>*</b>
           <input class="input"
                  type="text"
+                 inputmode="numeric"
+                 [class.input-error]="erroresUsuario['numero_documento']"
+                 [disabled]="editandoUsuario"
                  [(ngModel)]="formUsuario.numero_documento"
-                 maxlength="30"
+                 maxlength="12"
                  placeholder="Ej. 1011111111">
+          <small class="ayuda-campo" *ngIf="editandoUsuario">El documento no se puede modificar.</small>
+          <small class="error-campo" *ngIf="erroresUsuario['numero_documento']">{{ erroresUsuario['numero_documento'] }}</small>
         </label>
-
 
         <label class="campo">
           Correo electrónico <b>*</b>
           <input class="input"
                  type="email"
+                 [class.input-error]="erroresUsuario['correo']"
                  [(ngModel)]="formUsuario.correo"
                  maxlength="50"
+                 autocomplete="off"
                  placeholder="usuario@empresa.com">
-        </label>
-
-        <label class="campo" *ngIf="!editandoUsuario">
-          Contraseña <b>*</b>
-          <input class="input"
-                 type="password"
-                 [(ngModel)]="formUsuario.contrasenia"
-                 placeholder="Crea una contraseña segura">
+          <small class="error-campo" *ngIf="erroresUsuario['correo']">{{ erroresUsuario['correo'] }}</small>
         </label>
 
         <label class="campo">
           Rol <b>*</b>
           <select class="input"
+                  [class.input-error]="erroresUsuario['id_rol']"
+                  [disabled]="editandoUsuario && formUsuario.id_usuario === usuarioActualId"
                   [(ngModel)]="formUsuario.id_rol">
-            <option value="1">Administrador</option>
-            <option value="2">Vendedor</option>
-            <option value="3">Auxiliar administrativo</option>
+            <option [ngValue]="1">Administrador</option>
+            <option [ngValue]="2">Vendedor</option>
+            <option [ngValue]="3">Auxiliar administrativo</option>
           </select>
-        </label>
-
-        <label class="campo">
-          Estado <b>*</b>
-          <select class="input"
-                  [(ngModel)]="formUsuario.id_estado_usuario">
-            <option value="1">Contratado</option>
-            <option value="2">Suspendido</option>
-            <option value="3">En vacaciones</option>
-            <option value="4">Retirado</option>
-          </select>
+          <small class="error-campo" *ngIf="erroresUsuario['id_rol']">{{ erroresUsuario['id_rol'] }}</small>
         </label>
 
       </div>
 
       <div class="nota" style="margin-top: 15px;">
         <i class="pi pi-info-circle"></i>
-        <span>
-          Los campos marcados con * son obligatorios.
-          El correo debe ser único dentro de los usuarios registrados.
+        <span *ngIf="!editandoUsuario">
+          Los campos con * son obligatorios. El usuario se crea en estado <strong>Contratado</strong>
+          y el sistema le envía una contraseña aleatoria a su correo.
+        </span>
+        <span *ngIf="editandoUsuario">
+          Los campos con * son obligatorios. El estado se cambia con el botón de estado de la tabla.
         </span>
       </div>
 
@@ -611,9 +655,10 @@
 
       <button class="btn btn-primario"
               type="button"
+              [disabled]="guardando"
               (click)="guardarUsuario()">
-        <i class="pi pi-check"></i>
-        {{ editandoUsuario ? 'Guardar cambios' : 'Registrar usuario' }}
+        <i class="pi" [ngClass]="guardando ? 'pi-spin pi-spinner' : 'pi-check'"></i>
+        {{ guardando ? 'Guardando...' : (editandoUsuario ? 'Guardar cambios' : 'Registrar usuario') }}
       </button>
     </footer>
 
@@ -717,59 +762,10 @@
 
       <button class="btn btn-primario"
               type="button"
+              [disabled]="guardando"
               (click)="guardarEstado()">
         <i class="pi pi-check"></i>
         Guardar estado
-      </button>
-    </footer>
-
-  </section>
-</div>
-
-<!-- MODAL: ELIMINAR USUARIO -->
-<div class="overlay"
-     *ngIf="dlgEliminar"
-     (click)="cerrarEliminar()">
-
-  <section class="modal modal-chico"
-           role="alertdialog"
-           aria-modal="true"
-           aria-labelledby="tituloEliminar"
-           (click)="$event.stopPropagation()">
-
-    <div class="confirmacion-icono">
-      <i class="pi pi-trash"></i>
-    </div>
-
-    <h2 class="confirmacion-titulo" id="tituloEliminar">
-      ¿Eliminar usuario?
-    </h2>
-
-    <p class="confirmacion-texto" *ngIf="usuarioEliminar">
-      Vas a eliminar a
-      <strong>{{ usuarioEliminar.primer_nombre }} {{ usuarioEliminar.primer_apellido }}</strong>.
-      Esta acción no se puede deshacer desde esta pantalla.
-    </p>
-
-    <div class="modal-body" *ngIf="errorEliminar">
-      <div class="error">
-        <i class="pi pi-exclamation-circle"></i>
-        {{ errorEliminar }}
-      </div>
-    </div>
-
-    <footer class="modal-pie confirmacion-pie">
-      <button class="btn btn-secundario"
-              type="button"
-              (click)="cerrarEliminar()">
-        Cancelar
-      </button>
-
-      <button class="btn btn-peligro"
-              type="button"
-              (click)="confirmarEliminar()">
-        <i class="pi pi-trash"></i>
-        Sí, eliminar
       </button>
     </footer>
 

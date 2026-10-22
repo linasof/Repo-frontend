@@ -119,7 +119,8 @@
 
         <tbody>
         <tr
-          *ngFor="let p of productosFiltrados; trackBy: trackById">
+          *ngFor="let p of productosFiltrados; trackBy: trackById"
+          [class.fila-inactiva]="!p.activo">
 
           <td>
             <div class="celda-producto">
@@ -159,6 +160,7 @@
                 <span class="punto"></span>
                 {{ nivel(p) }}
               </span>
+              <span class="badge badge-gris" *ngIf="!p.activo" style="margin-left: 6px;">Inactivo</span>
           </td>
 
           <td>
@@ -195,11 +197,23 @@
               <button
                 class="btn-accion accion-desactivar"
                 type="button"
-                title="Cambiar estado del producto"
+                [title]="!p.activo ? 'Activar producto' : (puedeInactivar(p) ? 'Inactivar producto' : 'Solo se puede inactivar con 0 unidades')"
                 aria-label="Cambiar estado del producto"
                 *ngIf="esGerente"
+                [disabled]="!puedeInactivar(p)"
                 (click)="alternarEstado(p)">
-                <i class="pi pi-sync"></i>
+                <i class="pi" [ngClass]="p.activo ? 'pi-eye-slash' : 'pi-eye'"></i>
+              </button>
+
+              <button
+                class="btn-accion accion-eliminar"
+                type="button"
+                [title]="p.stock > 0 ? 'Solo se puede eliminar con 0 unidades' : 'Eliminar producto'"
+                aria-label="Eliminar producto"
+                *ngIf="esGerente"
+                [disabled]="p.stock > 0"
+                (click)="abrirEliminar(p)">
+                <i class="pi pi-trash"></i>
               </button>
 
             </div>
@@ -272,6 +286,7 @@
           <th>Producto</th>
           <th>Tipo de movimiento</th>
           <th>Cantidad</th>
+          <th>Registró</th>
         </tr>
         </thead>
 
@@ -298,10 +313,12 @@
           <td>
             <strong>{{ m.cantidad }}</strong>
           </td>
+
+          <td>{{ m.responsable }}</td>
         </tr>
 
         <tr *ngIf="movimientos.length === 0">
-          <td colspan="4">
+          <td colspan="5">
             <div class="vacio">
               <div class="vacio-icono">
                 <i class="pi pi-history"></i>
@@ -377,13 +394,15 @@
       <div class="form-grid">
 
         <label class="campo">
-          Código <b>*</b>
+          Código
           <input
             class="input"
             type="text"
-            [(ngModel)]="formProducto.codigo"
-            maxlength="40"
-            placeholder="Ej. PROD-001">
+            disabled
+            [value]="editandoProducto ? editandoProducto.codigo : codigoSugerido">
+          <small class="ayuda-campo">
+            {{ editandoProducto ? 'El código no se puede modificar.' : 'Lo asigna el sistema según la categoría.' }}
+          </small>
         </label>
 
         <label class="campo">
@@ -391,39 +410,48 @@
           <input
             class="input"
             type="text"
+            [class.input-error]="erroresProducto['nombre']"
             [(ngModel)]="formProducto.nombre"
-            maxlength="100"
-            placeholder="Nombre del producto">
+            maxlength="150"
+            placeholder="Ej. Tacón negro clásico">
+          <small class="error-campo" *ngIf="erroresProducto['nombre']">{{ erroresProducto['nombre'] }}</small>
         </label>
 
         <label class="campo">
           Categoría <b>*</b>
-          <select class="input" [(ngModel)]="formProducto.categoria">
-            <option value="">Selecciona una categoría</option>
-            <option *ngFor="let categoria of categorias" [value]="categoria">
-              {{ categoria }}
+          <select class="input" [class.input-error]="erroresProducto['id_categoria']" [(ngModel)]="formProducto.id_categoria">
+            <option [ngValue]="null">Selecciona una categoría</option>
+            <option *ngFor="let categoria of categorias" [ngValue]="categoria.id_categoria">
+              {{ categoria.nombre }}
             </option>
           </select>
+          <small class="error-campo" *ngIf="erroresProducto['id_categoria']">{{ erroresProducto['id_categoria'] }}</small>
         </label>
 
         <label class="campo">
           Unidad de medida <b>*</b>
-          <select class="input" [(ngModel)]="formProducto.unidad">
+          <select class="input" [class.input-error]="erroresProducto['unidad_medida']" [(ngModel)]="formProducto.unidad">
             <option value="">Selecciona unidad</option>
             <option *ngFor="let u of listaUnidadesMedida" [value]="u">
               {{ u }}
             </option>
           </select>
+          <small class="error-campo" *ngIf="erroresProducto['unidad_medida']">{{ erroresProducto['unidad_medida'] }}</small>
         </label>
 
         <label class="campo">
-          Stock inicial <b>*</b>
+          {{ editandoProducto ? 'Existencias actuales' : 'Stock inicial' }} <b *ngIf="!editandoProducto">*</b>
           <input
             class="input"
             type="number"
             min="0"
+            step="1"
+            [disabled]="!!editandoProducto"
+            [class.input-error]="erroresProducto['stock_actual']"
             [(ngModel)]="formProducto.stock"
             placeholder="0">
+          <small class="ayuda-campo" *ngIf="editandoProducto">Las existencias solo cambian con entradas y salidas.</small>
+          <small class="error-campo" *ngIf="erroresProducto['stock_actual']">{{ erroresProducto['stock_actual'] }}</small>
         </label>
 
         <label class="campo">
@@ -432,8 +460,11 @@
             class="input"
             type="number"
             min="0"
+            step="1"
+            [class.input-error]="erroresProducto['stock_minimo']"
             [(ngModel)]="formProducto.stockMinimo"
             placeholder="0">
+          <small class="error-campo" *ngIf="erroresProducto['stock_minimo']">{{ erroresProducto['stock_minimo'] }}</small>
         </label>
 
         <label class="campo completo">
@@ -441,9 +472,12 @@
           <input
             class="input"
             type="number"
-            min="0"
+            min="1"
+            step="0.01"
+            [class.input-error]="erroresProducto['precio_venta']"
             [(ngModel)]="formProducto.precio"
-            placeholder="0">
+            placeholder="Ej. 120000">
+          <small class="error-campo" *ngIf="erroresProducto['precio_venta']">{{ erroresProducto['precio_venta'] }}</small>
         </label>
 
       </div>
@@ -451,8 +485,8 @@
       <div class="nota">
         <i class="pi pi-info-circle"></i>
         <span>
-          Los campos marcados con * son obligatorios. Verifica el código,
-          el stock mínimo y el precio antes de guardar.
+          Los campos marcados con * son obligatorios. El precio debe ser mayor que cero
+          y no puede haber dos productos con el mismo nombre.
         </span>
       </div>
 
@@ -473,6 +507,7 @@
       <button
         class="btn btn-primario"
         type="button"
+        [disabled]="guardando"
         (click)="guardarProducto()">
         <i class="pi pi-check"></i>
         {{ editandoProducto ? 'Guardar cambios' : 'Registrar producto' }}
@@ -486,7 +521,7 @@
 <div
   class="overlay"
   *ngIf="dlgMovimiento"
-  (click)="dlgMovimiento = false">
+  (click)="cerrarMovimiento()">
 
   <section
     class="modal modal-chico"
@@ -506,8 +541,8 @@
           Registrar {{ movTipo === 'Entrada' ? 'entrada' : 'salida' }}
         </div>
 
-        <p class="modal-sub">
-          Registra el movimiento de existencias del producto seleccionado.
+        <p class="modal-sub" *ngIf="movProducto">
+          {{ movProducto.codigo }} · {{ movProducto.nombre }} · Stock actual: <strong>{{ movProducto.stock }}</strong>
         </p>
       </div>
 
@@ -515,7 +550,7 @@
         class="btn-icono-secundario"
         type="button"
         aria-label="Cerrar"
-        (click)="dlgMovimiento = false">
+        (click)="cerrarMovimiento()">
         <i class="pi pi-times"></i>
       </button>
     </header>
@@ -563,16 +598,74 @@
       <button
         class="btn btn-secundario"
         type="button"
-        (click)="dlgMovimiento = false">
+        (click)="cerrarMovimiento()">
         Cancelar
       </button>
 
       <button
         class="btn btn-primario"
         type="button"
+        [disabled]="guardando"
         (click)="registrarMovimiento()">
         <i class="pi pi-check"></i>
         Registrar movimiento
+      </button>
+    </footer>
+
+  </section>
+</div>
+
+<!-- MODAL: ELIMINAR PRODUCTO -->
+<div
+  class="overlay"
+  *ngIf="dlgEliminar"
+  (click)="cerrarEliminar()">
+
+  <section
+    class="modal modal-chico"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="tituloEliminarProducto"
+    (click)="$event.stopPropagation()">
+
+    <header class="modal-head">
+      <div>
+        <div class="modal-titulo" id="tituloEliminarProducto">
+          <i class="pi pi-trash" style="color:#e11d48"></i>
+          Eliminar producto
+        </div>
+        <p class="modal-sub" *ngIf="productoEliminar">
+          {{ productoEliminar.codigo }} · {{ productoEliminar.nombre }}
+        </p>
+      </div>
+
+      <button class="btn-icono-secundario" type="button" aria-label="Cerrar" (click)="cerrarEliminar()">
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <div class="modal-body">
+      <div class="nota">
+        <i class="pi pi-info-circle"></i>
+        <span>
+          Solo se pueden eliminar productos sin existencias y sin movimientos registrados.
+          Si ya tuvo entradas o salidas, inactívalo para no perder el historial.
+        </span>
+      </div>
+
+      <div class="error" *ngIf="errorEliminar">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorEliminar }}
+      </div>
+    </div>
+
+    <footer class="modal-pie">
+      <button class="btn btn-secundario" type="button" (click)="cerrarEliminar()">
+        Cancelar
+      </button>
+      <button class="btn btn-peligro" type="button" [disabled]="guardando" (click)="confirmarEliminar()">
+        <i class="pi pi-trash"></i>
+        Sí, eliminar
       </button>
     </footer>
 

@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Auth } from '../../service/auth';
 
 @Component({
@@ -16,7 +16,10 @@ export class InicioComponent {
   error = '';
   cargando = false;
 
-  constructor(private router: Router, private auth: Auth, private cdr: ChangeDetectorRef) {}
+  constructor(private router: Router, private auth: Auth, private cdr: ChangeDetectorRef, route: ActivatedRoute) {
+    // si lo sacaron por sesion vencida o usuario suspendido se muestra el motivo
+    this.error = route.snapshot.queryParamMap.get('motivo') || '';
+  }
 
   iniciarSesion(): void {
     this.error = '';
@@ -35,7 +38,9 @@ export class InicioComponent {
       error: (err) => {
         this.cargando = false;
         // el back manda el motivo en message (contraseña incorrecta, usuario retirado, etc)
-        this.error = err?.error?.message || 'No se pudo conectar con el servidor.';
+        this.error = err?.status === 0
+          ? 'No se pudo conectar con el servidor. Revisa que el back esté corriendo.'
+          : (err?.error?.message || 'No se pudo iniciar sesión.');
         this.cdr.markForCheck(); // para que el mensaje de error se vea en pantalla
       }
     });

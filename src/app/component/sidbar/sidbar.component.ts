@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { Auth } from '../../service/auth';
+import { Auth, ROL_ADMINISTRADOR, ROL_AUXILIAR } from '../../service/auth';
 
 @Component({
   selector: 'app-sidbar',
@@ -34,8 +34,12 @@ export class SidbarComponent {
     return this.auth.obtenerSesion()?.rol || 'Usuario del sistema';
   }
 
-  // Enlaces disponibles
-  enlaces: { ruta: string; label: string; icono: string }[] = [
+  // Enlaces disponibles (el de usuarios solo para administrador y auxiliar administrativo)
+  get enlaces(): { ruta: string; label: string; icono: string }[] {
+    return this.todosLosEnlaces.filter(e => e.ruta !== '/usuario' || this.auth.tieneRol(ROL_ADMINISTRADOR, ROL_AUXILIAR));
+  }
+
+  private todosLosEnlaces: { ruta: string; label: string; icono: string }[] = [
     {
       ruta: '/inventario',
       label: 'Inventario',
