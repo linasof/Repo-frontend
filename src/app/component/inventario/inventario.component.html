@@ -579,6 +579,259 @@
   </section>
 </div>
 
+<!-- NUEVO — MODAL: CENTRO DE REPORTES -->
+<div
+  class="overlay"
+  *ngIf="dlgReportes"
+  (click)="cerrarReportes()">
+
+  <section
+    class="modal modal-reportes"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tituloModalReportes"
+    (click)="$event.stopPropagation()">
+
+    <header class="modal-head">
+      <div>
+        <div class="modal-titulo" id="tituloModalReportes">
+          <i class="pi pi-chart-line" style="color:#2563eb"></i>
+          Centro de reportes
+        </div>
+
+        <p class="modal-sub">
+          Selecciona un período y el tipo de reporte que quieres consultar.
+        </p>
+      </div>
+
+      <button
+        class="btn-icono-secundario"
+        type="button"
+        aria-label="Cerrar"
+        (click)="cerrarReportes()">
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <div class="modal-body">
+
+      <!-- RANGO DE FECHAS -->
+      <div class="reporte-filtros">
+
+        <label class="campo">
+          Fecha inicial <b>*</b>
+          <input
+            class="input"
+            type="date"
+            [max]="fechaFin || fechaMax"
+            [ngModel]="fechaInicio"
+            (ngModelChange)="fechaInicio = $event; alCambiarFechas()">
+        </label>
+
+        <label class="campo">
+          Fecha final <b>*</b>
+          <input
+            class="input"
+            type="date"
+            [min]="fechaInicio"
+            [max]="fechaMax"
+            [ngModel]="fechaFin"
+            (ngModelChange)="fechaFin = $event; alCambiarFechas()">
+        </label>
+
+      </div>
+
+      <div class="error reporte-error" *ngIf="errorReporte" role="alert">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorReporte }}
+      </div>
+
+      <!-- TIPOS DE REPORTE -->
+      <div class="reporte-opciones">
+        <article
+          class="reporte-opcion"
+          *ngFor="let opcion of opcionesReporte"
+          [ngClass]="'reporte-opcion-' + opcion.tono"
+          [class.activa]="reporte?.tipo === opcion.tipo">
+
+          <div class="reporte-opcion-icono">
+            <i class="pi" [ngClass]="opcion.icono"></i>
+          </div>
+
+          <div class="reporte-opcion-texto">
+            <strong>{{ opcion.titulo }}</strong>
+            <span>{{ opcion.descripcion }}</span>
+          </div>
+
+          <button
+            class="btn btn-secundario"
+            type="button"
+            (click)="generarReporte(opcion.tipo)">
+            Generar reporte
+            <i class="pi pi-arrow-right"></i>
+          </button>
+        </article>
+      </div>
+
+      <!-- VISTA PREVIA DEL REPORTE -->
+      <div class="reporte-resultado" *ngIf="reporte">
+
+        <div class="reporte-resultado-head">
+          <div>
+            <span class="reporte-etiqueta">Vista previa</span>
+            <h3>{{ reporte.titulo }}</h3>
+            <p>{{ reporte.descripcion }}</p>
+          </div>
+
+          <button
+            class="btn btn-primario"
+            type="button"
+            [disabled]="reporte.filas.length === 0 || exportandoPdf"
+            (click)="descargarPdf()">
+            <i
+              class="pi"
+              [ngClass]="exportandoPdf ? 'pi-spin pi-spinner' : 'pi-file-pdf'">
+            </i>
+            {{ exportandoPdf ? 'Preparando PDF...' : 'Descargar PDF' }}
+          </button>
+        </div>
+
+        <section class="stats stats-reporte">
+          <article
+            class="stat"
+            *ngFor="let item of reporte.resumen"
+            [ngClass]="'stat-' + item.tono">
+
+            <div class="stat-info">
+              <p class="stat-label">{{ item.etiqueta }}</p>
+              <div class="stat-valor">{{ item.valor }}</div>
+              <p class="stat-nota">{{ item.nota }}</p>
+            </div>
+
+            <div class="stat-icono">
+              <i class="pi" [ngClass]="item.icono"></i>
+            </div>
+          </article>
+        </section>
+
+        <div class="tarjeta reporte-tabla-card">
+
+          <div class="tabla-scroll">
+            <table class="tabla">
+              <thead>
+              <tr>
+                <th *ngFor="let col of reporte.columnas; trackBy: trackByColumna">
+                  <button
+                    class="th-boton"
+                    type="button"
+                    [class.th-activo]="esOrdenActual(col)"
+                    (click)="ordenarPor(col)">
+                    {{ col.titulo }}
+                    <i
+                      class="pi"
+                      [ngClass]="esOrdenActual(col)
+                        ? (ordenAscendente ? 'pi-sort-amount-up-alt' : 'pi-sort-amount-down')
+                        : 'pi-sort-alt'">
+                    </i>
+                  </button>
+                </th>
+              </tr>
+              </thead>
+
+              <tbody>
+              <tr *ngFor="let fila of filasPagina">
+                <td *ngFor="let col of reporte.columnas; trackBy: trackByColumna">
+
+                  <ng-container *ngIf="col.tipo === 'posicion'; else celdaNormal">
+                    <span
+                      class="badge"
+                      *ngIf="claseBadgePosicion(fila[col.campo]); else posicionTexto"
+                      [ngClass]="claseBadgePosicion(fila[col.campo])">
+                      <span class="punto"></span>
+                      {{ fila[col.campo] }}
+                    </span>
+                    <ng-template #posicionTexto>
+                      <span class="categoria-texto">{{ fila[col.campo] }}</span>
+                    </ng-template>
+                  </ng-container>
+
+                  <ng-template #celdaNormal>
+                    <span
+                      [ngClass]="{
+                        'stock-celda': col.tipo === 'numero',
+                        'precio-celda': col.tipo === 'moneda' || col.tipo === 'veces'
+                      }">
+                      {{ valorCelda(col, fila) }}
+                    </span>
+                  </ng-template>
+
+                </td>
+              </tr>
+
+              <tr *ngIf="reporte.filas.length === 0">
+                <td [attr.colspan]="reporte.columnas.length">
+                  <div class="vacio">
+                    <div class="vacio-icono">
+                      <i class="pi pi-chart-bar"></i>
+                    </div>
+                    <strong>Sin resultados</strong>
+                    <p>No hay movimientos de inventario en el rango seleccionado.</p>
+                  </div>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <footer class="pie-tabla">
+            <span>
+              Mostrando <strong>{{ rangoDesde }}–{{ rangoHasta }}</strong>
+              de <strong>{{ reporte.filas.length }}</strong> registros
+            </span>
+
+            <div class="paginador" *ngIf="totalPaginasReporte > 1">
+              <button
+                class="btn-icono-secundario"
+                type="button"
+                aria-label="Página anterior"
+                [disabled]="paginaReporte === 1"
+                (click)="paginaAnterior()">
+                <i class="pi pi-chevron-left"></i>
+              </button>
+
+              <span class="pagina-info">
+                Página <strong>{{ paginaReporte }}</strong> de <strong>{{ totalPaginasReporte }}</strong>
+              </span>
+
+              <button
+                class="btn-icono-secundario"
+                type="button"
+                aria-label="Página siguiente"
+                [disabled]="paginaReporte === totalPaginasReporte"
+                (click)="paginaSiguiente()">
+                <i class="pi pi-chevron-right"></i>
+              </button>
+            </div>
+          </footer>
+
+        </div>
+      </div>
+
+    </div>
+
+    <footer class="modal-pie">
+      <button
+        class="btn btn-secundario"
+        type="button"
+        (click)="cerrarReportes()">
+        Cerrar
+      </button>
+    </footer>
+
+  </section>
+</div>
+
+
 <!-- NOTIFICACIONES -->
 <div
   class="toast"
