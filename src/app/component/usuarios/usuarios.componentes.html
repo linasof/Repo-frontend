@@ -3,7 +3,6 @@
 
 <main class="usuarios-wrapper">
 
-  <!-- ENCABEZADO -->
   <header class="encabezado">
     <div>
 
@@ -50,21 +49,16 @@
     </div>
   </header>
 
-  <!-- ========================================== -->
-  <!-- VISTA DE AUDITORÍA / BITÁCORA -->
-  <!-- ========================================== -->
   <div *ngIf="vistaActual === 'auditoria'" class="tarjeta contenedor-auditoria">
     <div class="header-seccion mb-3">
       <h2><i class="pi pi-history"></i> Historial de Bitácora / Auditoría</h2>
       <p>Registro detallado de acciones y cambios realizados por los usuarios en el sistema.</p>
     </div>
 
-    <!-- Mensaje o spinner de carga -->
     <div *ngIf="cargandoAuditoria" class="cargando-container">
       <p>Cargando el historial de auditoría...</p>
     </div>
 
-    <!-- Tabla de Auditoría -->
     <div class="tabla-scroll" *ngIf="!cargandoAuditoria">
     <table class="tabla">
       <thead>
@@ -95,7 +89,6 @@
         <td>{{ item.cambio_realizado }}</td>
       </tr>
 
-      <!-- Fila vacía si no hay registros -->
       <tr *ngIf="historialAuditoria.length === 0">
         <td colspan="6" class="text-center py-4">
           No hay registros de auditoría almacenados en la bitácora.
@@ -107,10 +100,8 @@
   </div>
 
 
-  <!-- VISTA: LISTADO DE USUARIOS -->
   <ng-container *ngIf="vistaActual === 'usuarios'">
 
-    <!-- ESTADÍSTICAS -->
     <section class="stats">
 
       <article class="stat stat-azul">
@@ -159,7 +150,6 @@
 
     </section>
 
-    <!-- TABLA PRINCIPAL -->
     <section class="tarjeta">
 
       <div class="barra-controles">
@@ -223,7 +213,6 @@
           <tr *ngFor="let usuario of usuariosFiltrados; trackBy: trackById"
               [class.fila-retirada]="usuario.nombre_estado_usuario === 'Retirado'">
 
-            <!-- USUARIO -->
             <td>
               <div class="celda-usuario">
                 <div class="avatar" [ngClass]="claseAvatar(usuario)">
@@ -247,23 +236,20 @@
               </div>
             </td>
 
-            <!-- DOCUMENTO -->
             <td>
               <span class="correo">{{ usuario.nombre_tipo_documento }} - {{ usuario.numero_documento }}</span>
             </td>
 
-            <!-- CORREO -->
             <td>
               <span class="correo">{{ usuario.correo }}</span>
             </td>
-            <!-- ROL -->
+
             <td>
               <span class="badge" [ngClass]="claseRol(usuario.nombre_rol)">
                 {{ usuario.nombre_rol }}
               </span>
             </td>
 
-            <!-- ESTADO -->
             <td>
               <span class="badge" [ngClass]="claseEstado(usuario.nombre_estado_usuario)">
                 <span class="punto"></span>
@@ -271,7 +257,6 @@
               </span>
             </td>
 
-            <!-- ACCIONES -->
             <td>
               <div class="acciones-fila">
 
@@ -306,7 +291,6 @@
 
           </tr>
 
-          <!-- ESTADO VACÍO -->
           <tr *ngIf="usuariosFiltrados.length === 0">
             <td colspan="6">
               <div class="vacio">
@@ -330,7 +314,6 @@
         </table>
       </div>
 
-      <!-- PIE DE TABLA -->
       <footer class="pie-tabla">
         <span>
           Mostrando <strong>{{ usuariosFiltrados.length }}</strong>
@@ -346,7 +329,6 @@
     </section>
   </ng-container>
 
-  <!-- VISTA: MI PERFIL -->
   <ng-container *ngIf="vistaActual === 'perfil'">
 
     <div class="perfil-layout">
@@ -479,7 +461,6 @@
 
 </main>
 
-<!-- MODAL: REGISTRAR / EDITAR USUARIO -->
 <div class="overlay"
      *ngIf="dlgUsuario"
      (click)="cerrarUsuario()">
@@ -619,11 +600,27 @@
                   [class.input-error]="erroresUsuario['id_rol']"
                   [disabled]="editandoUsuario && formUsuario.id_usuario === usuarioActualId"
                   [(ngModel)]="formUsuario.id_rol">
+            <option [ngValue]="2">Gerente</option>
             <option [ngValue]="1">Administrador</option>
-            <option [ngValue]="2">Vendedor</option>
-            <option [ngValue]="3">Auxiliar administrativo</option>
+            <option [ngValue]="4">Vendedor</option>
           </select>
           <small class="error-campo" *ngIf="erroresUsuario['id_rol']">{{ erroresUsuario['id_rol'] }}</small>
+        </label>
+        <label class="campo" *ngIf="!editandoUsuario">
+          Estado
+          <input class="input" type="text" value="Contratado" disabled>
+          <small class="ayuda-campo">Todo usuario nuevo queda en estado Contratado.</small>
+        </label>
+
+        <label class="campo" *ngIf="editandoUsuario">
+          Estado <b>*</b>
+          <select class="input"
+                  [class.input-error]="erroresUsuario['id_estado_usuario']"
+                  [disabled]="formUsuario.id_usuario === usuarioActualId"
+                  [(ngModel)]="formUsuario.id_estado_usuario">
+            <option *ngFor="let estado of estados" [ngValue]="idsEstado[estado]">{{ estado }}</option>
+          </select>
+          <small class="error-campo" *ngIf="erroresUsuario['id_estado_usuario']">{{ erroresUsuario['id_estado_usuario'] }}</small>
         </label>
 
       </div>
@@ -635,7 +632,7 @@
           y el sistema le envía una contraseña aleatoria a su correo.
         </span>
         <span *ngIf="editandoUsuario">
-          Los campos con * son obligatorios. El estado se cambia con el botón de estado de la tabla.
+          Los campos con * son obligatorios. Suspendidos o retirados no pueden iniciar sesión.
         </span>
       </div>
 
@@ -665,7 +662,6 @@
   </section>
 </div>
 
-<!-- MODAL: CAMBIAR ESTADO -->
 <div class="overlay"
      *ngIf="dlgEstado"
      (click)="cerrarCambioEstado()">
