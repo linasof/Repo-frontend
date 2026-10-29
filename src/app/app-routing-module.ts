@@ -4,6 +4,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { InicioComponent } from './component/inicio/inicio.component';
 import { InventarioComponent } from './component/inventario/inventario.component';
 import { UsuariosComponentes } from './component/usuarios/usuarios.componentes';
+import { PerfilComponent } from './component/perfil/perfil.component';
 import { sesionGuard, usuariosGuard } from './service/guards';
 
 const routes: Routes = [
@@ -11,6 +12,7 @@ const routes: Routes = [
   { path: 'inicio', component: InicioComponent },
   { path: 'usuario', component: UsuariosComponentes, canActivate: [usuariosGuard] },
   { path: 'inventario', component: InventarioComponent, canActivate: [sesionGuard] },
+  { path: 'perfil', component: PerfilComponent, canActivate: [sesionGuard] },
   { path: '**', redirectTo: 'inicio' }
 ];
 
