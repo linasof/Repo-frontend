@@ -1,0 +1,121 @@
+<app-sidbar></app-sidbar>
+<app-navbar></app-navbar>
+
+<main class="usuarios-wrapper">
+
+  <header class="encabezado">
+    <div>
+      <h1>
+        <i class="pi pi-user" style="color:#2563eb"></i>
+        Mi perfil
+      </h1>
+      <p class="subtitulo">Consulta tus datos y cambia tu contraseña.</p>
+    </div>
+  </header>
+
+  <div class="perfil-layout">
+
+    <section class="perfil-card" *ngIf="usuario as u">
+      <div class="perfil-portada"></div>
+      <div class="perfil-avatar">{{ u.primer_nombre.charAt(0) || 'U' }}</div>
+
+      <div class="perfil-contenido">
+        <span class="badge" [ngClass]="claseEstado(u.nombre_estado_usuario)">
+          <span class="punto"></span>
+          {{ u.nombre_estado_usuario }}
+        </span>
+
+        <h2>{{ u.primer_nombre }} {{ u.segundo_nombre }} {{ u.primer_apellido }} {{ u.segundo_apellido }}</h2>
+
+        <p class="perfil-rol">
+          <i class="pi pi-shield"></i>
+          {{ rol }}
+        </p>
+
+        <div class="perfil-datos">
+          <div>
+            <span>Usuario (Login)</span>
+            <strong>{{ u.nombre_usuario }}</strong>
+          </div>
+          <div>
+            <span>Documento</span>
+            <strong>{{ u.nombre_tipo_documento }} - {{ u.numero_documento }}</strong>
+          </div>
+          <div>
+            <span>Correo electrónico</span>
+            <strong>{{ u.correo }}</strong>
+          </div>
+        </div>
+
+        <p class="nota-perfil">
+          <i class="pi pi-info-circle"></i>
+          Si algún dato está mal, pídele al administrador que lo corrija.
+        </p>
+      </div>
+    </section>
+
+    <section class="tarjeta" *ngIf="!usuario && !cargando">
+      <div class="vacio">
+        <div class="vacio-icono"><i class="pi pi-user"></i></div>
+        <strong>Perfil no disponible</strong>
+        <p>No se pudo cargar la información de tu usuario.</p>
+      </div>
+    </section>
+
+    <section class="tarjeta tarjeta-clave">
+      <h2 class="titulo-clave"><i class="pi pi-lock"></i> Cambiar contraseña</h2>
+      <p class="subtitulo">Mínimo 8 caracteres, con una mayúscula, una minúscula y un número.</p>
+
+      <div class="form-grid una-columna">
+        <label class="campo">
+          Contraseña actual <b>*</b>
+          <input class="input" [type]="verClaves ? 'text' : 'password'" autocomplete="current-password"
+                 [class.input-error]="erroresClave['contrasenia_actual']"
+                 [(ngModel)]="formClave.actual" maxlength="64">
+          <small class="error-campo" *ngIf="erroresClave['contrasenia_actual']">{{ erroresClave['contrasenia_actual'] }}</small>
+        </label>
+
+        <label class="campo">
+          Nueva contraseña <b>*</b>
+          <input class="input" [type]="verClaves ? 'text' : 'password'" autocomplete="new-password"
+                 [class.input-error]="erroresClave['contrasenia_nueva']"
+                 [(ngModel)]="formClave.nueva" maxlength="64">
+          <small class="error-campo" *ngIf="erroresClave['contrasenia_nueva']">{{ erroresClave['contrasenia_nueva'] }}</small>
+        </label>
+
+        <label class="campo">
+          Confirmar nueva contraseña <b>*</b>
+          <input class="input" [type]="verClaves ? 'text' : 'password'" autocomplete="new-password"
+                 [class.input-error]="erroresClave['confirmacion']"
+                 [(ngModel)]="formClave.confirmacion" maxlength="64">
+          <small class="error-campo" *ngIf="erroresClave['confirmacion']">{{ erroresClave['confirmacion'] }}</small>
+        </label>
+
+        <label class="ver-claves">
+          <input type="checkbox" [(ngModel)]="verClaves"> Mostrar contraseñas
+        </label>
+      </div>
+
+      <div class="error" *ngIf="errorClave">
+        <i class="pi pi-exclamation-circle"></i>
+        {{ errorClave }}
+      </div>
+
+      <button class="btn btn-primario" type="button" [disabled]="guardando" (click)="cambiarContrasenia()">
+        <i class="pi pi-check"></i>
+        Guardar contraseña
+      </button>
+    </section>
+
+  </div>
+</main>
+
+<div class="toast" *ngIf="toast"
+     [ngClass]="{ 'toast-ok': toast.tipo === 'ok', 'toast-error': toast.tipo === 'error' }"
+     role="status" aria-live="polite">
+  <i class="pi" [ngClass]="{ 'pi-check-circle': toast.tipo === 'ok', 'pi-times-circle': toast.tipo === 'error' }"></i>
+  <span>{{ toast.texto }}</span>
+  <button class="toast-cerrar" type="button" aria-label="Cerrar notificación" (click)="cerrarToast()">
+    <i class="pi pi-times"></i>
+  </button>
+</div>
