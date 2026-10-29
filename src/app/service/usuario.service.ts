@@ -12,6 +12,10 @@ export class UsuarioService {
 
   constructor(private http: HttpClient) { }
 
+  getPerfil(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/perfil/`);
+  }
+
   getUsuarios(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/`);
   }
