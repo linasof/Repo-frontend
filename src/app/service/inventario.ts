@@ -26,10 +26,6 @@ export class Inventario {
     return this.http.put(`${this.baseUrl}/productos/actualizar/${id}/`, producto);
   }
 
-  eliminarProducto(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/productos/eliminar/${id}/`);
-  }
-
 
   getCategorias(): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/categorias/`);
