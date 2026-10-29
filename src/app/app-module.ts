@@ -8,6 +8,7 @@ import { UsuariosComponentes } from './component/usuarios/usuarios.componentes';
 import { InventarioComponent } from './component/inventario/inventario.component';
 import { NavbarComponent } from './component/navbar/navbar.component';
 import { SidbarComponent } from './component/sidbar/sidbar.component';
+import { PerfilComponent } from './component/perfil/perfil.component';
 import { CommonModule } from '@angular/common';
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { TokenInterceptor } from './service/token.interceptor';
@@ -19,18 +20,18 @@ import { TokenInterceptor } from './service/token.interceptor';
     UsuariosComponentes,
     InventarioComponent,
     NavbarComponent,
-    SidbarComponent
+    SidbarComponent,
+    PerfilComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     FormsModule,
     CommonModule,
-    HttpClientModule // <-- Agregado a los imports
+    HttpClientModule 
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    // le pone el token de la sesion a todas las peticiones al back
     { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true }
   ],
   bootstrap: [AppComponent]
