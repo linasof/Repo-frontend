@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Usuario } from '../../model/usuario';
 import { UsuarioService } from '../../service/usuario.service';
-import { Auth, ROL_ADMINISTRADOR, ROL_AUXILIAR } from '../../service/auth';
+import { Auth, ROL_GERENTE, ROL_ADMINISTRADOR } from '../../service/auth';
 import { AuditoriaService, RegistroBitacora } from '../../service/auditoria.service';
 import {
   Errores, erroresDelServidor, limpiar, validarContrasenia, validarCorreo, validarDocumento,
@@ -30,8 +30,9 @@ export class UsuariosComponentes implements OnInit {
   busqueda: string = '';
   filtroRol: string = '';
   filtroEstado: string = '';
-  // mismos nombres e ids que las tablas rol, estado_usuario y tipo_documento de la bd
-  roles: string[] = ['Administrador', 'Vendedor', 'Auxiliar administrativo'];
+  
+  roles: string[] = ['Gerente', 'Administrador', 'Vendedor'];
+  idsRol: number[] = [1, 2, 4]; 
   estados: string[] = ['Contratado', 'Suspendido', 'En vacaciones', 'Retirado'];
   idsEstado: { [nombre: string]: number } = { 'Contratado': 1, 'Suspendido': 2, 'En vacaciones': 3, 'Retirado': 4 };
 
@@ -47,7 +48,6 @@ export class UsuariosComponentes implements OnInit {
   errorUsuario: string = '';
   erroresUsuario: Errores = {};
 
-  // cambio de contraseña en mi perfil
   formClave = { actual: '', nueva: '', confirmacion: '' };
   erroresClave: Errores = {};
   errorClave: string = '';
@@ -65,13 +65,12 @@ export class UsuariosComponentes implements OnInit {
     private auditoriaService: AuditoriaService
   ) {}
 
-  // el auxiliar administrativo crea y modifica usuarios, el administrador (gerente) solo consulta
   get puedeGestionarUsuarios(): boolean {
-    return this.auth.tieneRol(ROL_AUXILIAR);
+    return this.auth.tieneRol(ROL_ADMINISTRADOR);
   }
 
   get puedeVerAuditoria(): boolean {
-    return this.auth.tieneRol(ROL_ADMINISTRADOR, ROL_AUXILIAR);
+    return this.auth.tieneRol(ROL_GERENTE, ROL_ADMINISTRADOR);
   }
 
   get usuariosFiltrados(): Usuario[] {
@@ -87,7 +86,7 @@ export class UsuariosComponentes implements OnInit {
   }
 
   ngOnInit(): void {
-    // el usuario marcado como "Tú" es el que inició sesión
+  
     const sesion = this.auth.obtenerSesion();
     if (sesion) {
       this.usuarioActualId = sesion.id_usuario;
@@ -108,7 +107,7 @@ export class UsuariosComponentes implements OnInit {
         }));
         this.calcularEstadisticas();
         this.usuarioSesion = this.listaUsuarios.find(u => u.id_usuario === this.usuarioActualId) || null;
-        this.cdr.markForCheck(); // para que la tabla se pinte apenas llegan los datos
+        this.cdr.markForCheck(); 
       },
       error: (err) => {
         const { mensaje } = erroresDelServidor(err, 'No se pudieron cargar los usuarios.');
@@ -117,7 +116,6 @@ export class UsuariosComponentes implements OnInit {
     });
   }
 
-  // revisa el formulario antes de mandarlo, con las mismas reglas del back
   private validarFormulario(): Errores {
     const f = this.formUsuario;
     const errores: Errores = {};
@@ -130,11 +128,24 @@ export class UsuariosComponentes implements OnInit {
     if (!this.editandoUsuario) {
       validarDocumento(errores, 'numero_documento', f.numero_documento, Number(f.id_tipo_documento));
     }
-    if (!f.id_rol) errores['id_rol'] = 'Selecciona un rol';
+    if (!this.idsRol.includes(Number(f.id_rol))) errores['id_rol'] = 'Selecciona un rol válido';
+    if (![1, 2].includes(Number(f.id_tipo_documento))) errores['id_tipo_documento'] = 'Selecciona un tipo de documento válido';
+    if (this.editandoUsuario) {
+
+      const original = this.listaUsuarios.find(u => u.id_usuario === f.id_usuario);
+      if (!Object.values(this.idsEstado).includes(Number(f.id_estado_usuario))) {
+        errores['id_estado_usuario'] = 'Selecciona un estado válido';
+      } else if (f.id_usuario === this.usuarioActualId && original && Number(original.id_estado_usuario) !== Number(f.id_estado_usuario)) {
+        errores['id_estado_usuario'] = 'No puedes cambiar tu propio estado';
+      }
+      if (f.id_usuario === this.usuarioActualId && original && Number(original.id_rol) !== Number(f.id_rol)) {
+        errores['id_rol'] = 'No puedes cambiar tu propio rol';
+      }
+    }
     if (!errores['segundo_nombre'] && f.segundo_nombre && limpiar(f.segundo_nombre).toLowerCase() === limpiar(f.primer_nombre).toLowerCase()) {
       errores['segundo_nombre'] = 'El segundo nombre no puede ser igual al primero';
     }
-    // no buscar duplicados en la lista local para no depender de ella, eso lo responde el back
+
     return errores;
   }
 
@@ -191,7 +202,10 @@ export class UsuariosComponentes implements OnInit {
     }
     if (usuario) {
       this.editandoUsuario = true;
-      this.formUsuario = { ...usuario };
+      this.formUsuario = {
+        ...usuario,
+        id_estado_usuario: usuario.id_estado_usuario || this.idsEstado[usuario.nombre_estado_usuario || ''] || 1
+      };
     } else {
       this.editandoUsuario = false;
       this.formUsuario = this.inicializarUsuarioVacio();
@@ -223,11 +237,15 @@ export class UsuariosComponentes implements OnInit {
       this.errorEstado = 'Selecciona un estado.';
       return;
     }
+    if (this.usuarioEstado.id_usuario === this.usuarioActualId) {
+      this.errorEstado = 'No puedes cambiar tu propio estado.';
+      return;
+    }
     if (this.nuevoEstado === this.usuarioEstado.nombre_estado_usuario) {
       this.errorEstado = 'El usuario ya está en ese estado.';
       return;
     }
-    // se manda el usuario completo con el estado nuevo al actualizar del back
+
     const u = this.usuarioEstado;
     const datos: any = {
       nombre_usuario: u.nombre_usuario, primer_nombre: u.primer_nombre, segundo_nombre: u.segundo_nombre,
@@ -291,7 +309,6 @@ export class UsuariosComponentes implements OnInit {
     });
   }
 
-  /* Metodo para abrir la auditoria de usuarios */
   abrirAuditoria(): void {
     this.vistaActual = 'auditoria';
     this.cargarHistorialAuditoria();
@@ -322,13 +339,13 @@ export class UsuariosComponentes implements OnInit {
       nombre_usuario: '', primer_nombre: '', segundo_nombre: '',
       primer_apellido: '', segundo_apellido: '',
       correo: '', numero_documento: '',
-      id_rol: 2, id_tipo_documento: 1, id_estado_usuario: 1
+      id_rol: 4, id_tipo_documento: 1, id_estado_usuario: 1
     };
   }
 
   calcularEstadisticas(): void {
     this.totalUsuarios = this.listaUsuarios.length;
-    // activos: los que pueden entrar al sistema, inactivos: los retirados
+
     this.usuariosActivos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Contratado' || u.nombre_estado_usuario === 'En vacaciones').length;
     this.usuariosInactivos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Retirado').length;
     this.usuariosSuspendidos = this.listaUsuarios.filter(u => u.nombre_estado_usuario === 'Suspendido').length;
@@ -345,7 +362,7 @@ export class UsuariosComponentes implements OnInit {
 
   cerrarToast(): void { this.toast = null; }
   trackById(index: number, item: Usuario): any { return item.id_usuario; }
-  claseRol(rol?: string): string { if (rol === 'Administrador') return 'badge-info'; if (rol === 'Vendedor') return 'badge-purpura'; return 'badge-gris'; }
+  claseRol(rol?: string): string { if (rol === 'Gerente') return 'badge-info'; if (rol === 'Vendedor') return 'badge-purpura'; return 'badge-gris'; }
   claseEstado(estado?: string): string { if (estado === 'Contratado') return 'badge-verde'; if (estado === 'Suspendido' || estado === 'Retirado') return 'badge-rojo'; return 'badge-ambar'; }
   claseAvatar(usuario: Usuario): string { return 'avatar-azul'; }
 }
