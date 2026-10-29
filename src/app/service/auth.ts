@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
-// datos que devuelve el back cuando el login es correcto
+
 export interface SesionUsuario {
   token: string;
   id_usuario: number;
@@ -15,10 +15,9 @@ export interface SesionUsuario {
   estado: string;
 }
 
-// mismos nombres de la tabla rol
+export const ROL_GERENTE = 'Gerente';
 export const ROL_ADMINISTRADOR = 'Administrador';
 export const ROL_VENDEDOR = 'Vendedor';
-export const ROL_AUXILIAR = 'Auxiliar administrativo';
 
 @Injectable({
   providedIn: 'root'
@@ -30,7 +29,6 @@ export class Auth {
 
   constructor(private http: HttpClient) { }
 
-  // manda correo y contraseña al back y si es correcto guarda la sesión
   login(correo: string, contrasenia: string): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/login/`, { correo, contrasenia }).pipe(
       tap(respuesta => localStorage.setItem(this.claveSesion, JSON.stringify(respuesta.data)))
